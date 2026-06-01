@@ -1,13 +1,13 @@
-import { Crosshair, Database, Timer } from "lucide-react";
-import type { YearRange } from "../../types/domain";
+import { Crosshair, Database, SlidersHorizontal, Timer } from "lucide-react";
 
 type AppHeaderProps = {
   totalBattles: number;
   filteredBattles: number;
-  yearRange: YearRange;
+  visibleMapBattles: number;
+  currentYear: number;
 };
 
-export function AppHeader({ totalBattles, filteredBattles, yearRange }: AppHeaderProps) {
+export function AppHeader({ totalBattles, filteredBattles, visibleMapBattles, currentYear }: AppHeaderProps) {
   return (
     <header className="app-header">
       <div>
@@ -23,14 +23,16 @@ export function AppHeader({ totalBattles, filteredBattles, yearRange }: AppHeade
           <span>{totalBattles} HCED events</span>
         </div>
         <div className="metric-chip">
+          <SlidersHorizontal size={18} />
+          <span>{filteredBattles} matching filters</span>
+        </div>
+        <div className="metric-chip">
           <Crosshair size={18} />
-          <span>{filteredBattles} visible</span>
+          <span>{visibleMapBattles} visible on map</span>
         </div>
         <div className="metric-chip">
           <Timer size={18} />
-          <span>
-            {yearRange[0]}-{yearRange[1]}
-          </span>
+          <span>{currentYear}</span>
         </div>
       </div>
     </header>

@@ -9,6 +9,19 @@ export function getBattleYearRange(battles: Battle[]): YearRange {
   return [Math.min(...years), Math.max(...years)];
 }
 
+export function getClosestBattleYear(battles: Battle[], preferredYear: number): number {
+  if (battles.length === 0) {
+    return preferredYear;
+  }
+
+  return battles.reduce((closestYear, battle) => {
+    const closestDistance = Math.abs(closestYear - preferredYear);
+    const battleDistance = Math.abs(battle.year - preferredYear);
+
+    return battleDistance < closestDistance ? battle.year : closestYear;
+  }, battles[0].year);
+}
+
 export function filterBattles(battles: Battle[], filters: BattleFilters): Battle[] {
   const { selectedWarId, selectedYearRange, selectedParticipant } = filters;
   const [startYear, endYear] = selectedYearRange;
@@ -34,7 +47,7 @@ export function summarizeBattles(battles: Battle[]): BattleSummary {
     battlesByType[battle.type ?? "unknown"] = (battlesByType[battle.type ?? "unknown"] ?? 0) + 1;
     battlesByWar[battle.warId] = (battlesByWar[battle.warId] ?? 0) + 1;
 
-    for (const participant of battle.participants) {
+    for (const participant of new Set(battle.participants)) {
       participantCounts.set(participant, (participantCounts.get(participant) ?? 0) + 1);
     }
   }

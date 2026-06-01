@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterBattles, summarizeBattles } from "./battleAnalytics";
+import { filterBattles, getClosestBattleYear, summarizeBattles } from "./battleAnalytics";
 
 const battles = [
   {
@@ -61,5 +61,25 @@ describe("battle analytics", () => {
       "air battle": 1,
       "land battle": 2,
     });
+  });
+
+  it("finds the closest year with a visible battle", () => {
+    expect(getClosestBattleYear(battles, 2000)).toBe(1940);
+    expect(getClosestBattleYear(battles, 1814)).toBe(1815);
+    expect(getClosestBattleYear([], 2003)).toBe(2003);
+  });
+
+  it("counts a participant only once per conflict event", () => {
+    const summary = summarizeBattles([
+      {
+        ...battles[0],
+        participants: ["france", "france", "prussia"],
+      },
+    ]);
+
+    expect(summary.topParticipants).toEqual([
+      ["france", 1],
+      ["prussia", 1],
+    ]);
   });
 });

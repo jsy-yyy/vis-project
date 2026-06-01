@@ -11,6 +11,7 @@ type FilterPanelProps = {
   onWarChange: (warId: string | null) => void;
   onYearRangeChange: (range: YearRange) => void;
   onParticipantChange: (participantId: string | null) => void;
+  onReset: () => void;
 };
 
 export function FilterPanel({
@@ -23,6 +24,7 @@ export function FilterPanel({
   onWarChange,
   onYearRangeChange,
   onParticipantChange,
+  onReset,
 }: FilterPanelProps) {
   const [minYear, maxYear] = allYearRange;
 
@@ -94,11 +96,7 @@ export function FilterPanel({
       <button
         className="icon-text-button"
         type="button"
-        onClick={() => {
-          onWarChange("all");
-          onYearRangeChange(allYearRange);
-          onParticipantChange(null);
-        }}
+        onClick={onReset}
       >
         <RotateCcw size={16} />
         Reset

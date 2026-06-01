@@ -540,7 +540,7 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
 
   useEffect(() => {
     setSelectedCountryName(null);
-  }, [currentYear]);
+  }, [battles, currentYear]);
   const activeCountryHighlight = useMemo(() => {
     if (selectedCountryName) {
       return getCountryConflictHighlight(selectedCountryName, battles, countryLookup);

@@ -9,7 +9,13 @@ import { MapView } from "./components/views/MapView";
 import { NetworkView } from "./components/views/NetworkView";
 import { TimelineView } from "./components/views/TimelineView";
 import { useBattleData } from "./hooks/useBattleData";
-import { filterBattles, getBattleYearRange, getSelectedBattle, summarizeBattles } from "./lib/battleAnalytics";
+import {
+  filterBattles,
+  getBattleYearRange,
+  getClosestBattleYear,
+  getSelectedBattle,
+  summarizeBattles,
+} from "./lib/battleAnalytics";
 import type { YearRange } from "./types/domain";
 
 export default function App() {
@@ -20,6 +26,7 @@ export default function App() {
   const [currentYear, setCurrentYear] = useState(allYearRange[1]);
   const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
   const [selectedBattleId, setSelectedBattleId] = useState<string | null>(null);
+  const [yearAdjustmentMessage, setYearAdjustmentMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (battles.length === 0) {
@@ -30,7 +37,25 @@ export default function App() {
     setCurrentYear(allYearRange[1]);
   }, [allYearRange, battles]);
 
-  const filteredBattles = useMemo(
+  const timeWindowBattles = useMemo(
+    () =>
+      filterBattles(battles, {
+        selectedWarId: "all",
+        selectedYearRange,
+        selectedParticipant: null,
+      }),
+    [battles, selectedYearRange],
+  );
+  const scopeBattles = useMemo(
+    () =>
+      filterBattles(battles, {
+        selectedWarId,
+        selectedYearRange,
+        selectedParticipant: null,
+      }),
+    [battles, selectedWarId, selectedYearRange],
+  );
+  const resultBattles = useMemo(
     () =>
       filterBattles(battles, {
         selectedWarId,
@@ -40,10 +65,10 @@ export default function App() {
     [battles, selectedWarId, selectedYearRange, selectedParticipant],
   );
 
-  const summary = useMemo(() => summarizeBattles(filteredBattles), [filteredBattles]);
+  const summary = useMemo(() => summarizeBattles(resultBattles), [resultBattles]);
   const mapBattles = useMemo(
-    () => filteredBattles.filter((battle) => battle.year === currentYear),
-    [currentYear, filteredBattles],
+    () => resultBattles.filter((battle) => battle.year === currentYear),
+    [currentYear, resultBattles],
   );
   const selectedBattle = useMemo(
     () => getSelectedBattle(mapBattles, selectedBattleId),
@@ -51,13 +76,84 @@ export default function App() {
   );
 
   function updateYearRange(range: YearRange) {
+    const nextBattles = filterBattles(battles, {
+      selectedWarId,
+      selectedYearRange: range,
+      selectedParticipant,
+    });
+
+    const clampedYear = Math.min(Math.max(currentYear, range[0]), range[1]);
+    const nextYear = getClosestBattleYear(nextBattles, clampedYear);
+
     setSelectedYearRange(range);
-    setCurrentYear((year) => Math.min(Math.max(year, range[0]), range[1]));
+    setCurrentYear(nextYear);
+    setYearAdjustmentMessage(
+      nextYear !== currentYear ? `Map year adjusted to ${nextYear} for the selected year window.` : null,
+    );
     setSelectedBattleId(null);
   }
 
   function updateCurrentYear(year: number) {
     setCurrentYear(year);
+    setYearAdjustmentMessage(null);
+    setSelectedBattleId(null);
+  }
+
+  function resetFilters() {
+    setSelectedWarId("all");
+    setSelectedYearRange(allYearRange);
+    setSelectedParticipant(null);
+    setCurrentYear(allYearRange[1]);
+    setYearAdjustmentMessage(null);
+    setSelectedBattleId(null);
+  }
+
+  function applyCaseStudy(warId: string, range: YearRange) {
+    const nextBattles = filterBattles(battles, {
+      selectedWarId: warId,
+      selectedYearRange: range,
+      selectedParticipant: null,
+    });
+
+    setSelectedWarId(warId);
+    setSelectedYearRange(range);
+    setSelectedParticipant(null);
+    setCurrentYear(getClosestBattleYear(nextBattles, range[1]));
+    setYearAdjustmentMessage(null);
+    setSelectedBattleId(null);
+  }
+
+  function updateWarFilter(warId: string | null) {
+    const nextBattles = filterBattles(battles, {
+      selectedWarId: warId,
+      selectedYearRange,
+      selectedParticipant,
+    });
+
+    const nextYear = getClosestBattleYear(nextBattles, currentYear);
+
+    setSelectedWarId(warId);
+    setCurrentYear(nextYear);
+    setYearAdjustmentMessage(
+      nextYear !== currentYear ? `Map year adjusted to ${nextYear} for the selected conflict group.` : null,
+    );
+    setSelectedBattleId(null);
+  }
+
+  function updateParticipantFilter(participantId: string | null) {
+    const nextBattles = filterBattles(battles, {
+      selectedWarId,
+      selectedYearRange,
+      selectedParticipant: participantId,
+    });
+
+    const nextYear = getClosestBattleYear(nextBattles, currentYear);
+
+    setSelectedParticipant(participantId);
+    setCurrentYear(nextYear);
+    setYearAdjustmentMessage(
+      nextYear !== currentYear ? `Map year adjusted to ${nextYear} for the selected participant.` : null,
+    );
     setSelectedBattleId(null);
   }
 
@@ -74,8 +170,9 @@ export default function App() {
       header={
         <AppHeader
           totalBattles={battles.length}
-          filteredBattles={mapBattles.length}
-          yearRange={[currentYear, currentYear]}
+          filteredBattles={resultBattles.length}
+          visibleMapBattles={mapBattles.length}
+          currentYear={currentYear}
         />
       }
       filters={
@@ -86,9 +183,10 @@ export default function App() {
           selectedWarId={selectedWarId}
           selectedYearRange={selectedYearRange}
           selectedParticipant={selectedParticipant}
-          onWarChange={(warId) => setSelectedWarId(warId)}
+          onWarChange={updateWarFilter}
           onYearRangeChange={updateYearRange}
-          onParticipantChange={(participantId) => setSelectedParticipant(participantId)}
+          onParticipantChange={updateParticipantFilter}
+          onReset={resetFilters}
         />
       }
       primary={
@@ -100,19 +198,21 @@ export default function App() {
             onSelectBattle={setSelectedBattleId}
           />
           <TimelineView
-            battles={filteredBattles}
+            baselineBattles={timeWindowBattles}
+            filteredBattles={resultBattles}
             selectedBattleId={selectedBattleId}
             allYearRange={allYearRange}
             selectedYearRange={selectedYearRange}
             currentYear={currentYear}
+            yearAdjustmentMessage={yearAdjustmentMessage}
             onSelectBattle={setSelectedBattleId}
             onCurrentYearChange={updateCurrentYear}
           />
           <NetworkView
-            battles={filteredBattles}
+            battles={scopeBattles}
             participants={participants}
             selectedParticipant={selectedParticipant}
-            onSelectParticipant={setSelectedParticipant}
+            onSelectParticipant={updateParticipantFilter}
           />
         </>
       }
@@ -120,7 +220,7 @@ export default function App() {
         <>
           <StatisticsPanel summary={summary} wars={wars} participants={participants} />
           <DetailPanel battle={selectedBattle} wars={wars} participants={participants} />
-          <CaseStudyPanel onSelectWar={setSelectedWarId} onYearRangeChange={updateYearRange} />
+          <CaseStudyPanel onApplyCaseStudy={applyCaseStudy} />
         </>
       }
     />
