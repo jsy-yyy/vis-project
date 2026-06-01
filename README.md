@@ -144,6 +144,32 @@ useBattleData(): {
 
 早期 `src/data/mockData.ts` 仅保留为开发参考，前端默认不再使用。
 
+## 分工边界
+
+成员 A 重点负责：
+
+- HCED 原始数据下载、清洗和字段映射。
+- CShapes 2.0 历史边界数据处理与快照生成。
+- 维护 `scripts/build-hced-conflict-events.mjs` 和 `scripts/build-cshapes-snapshots.mjs`。
+- 检查事件坐标、年份范围、重复记录和缺失值。
+- 改善参战方清洗，合并别名、复数形式和明显噪声词。
+- 完善地图中的事件点、历史边界和国家高亮表达。
+
+成员 B 重点负责：
+
+- `TimelineView` 的正式实现与交互优化。
+- `NetworkView` 的正式关系网络实现。
+- 时间轴、网络图和地图之间的联动细节。
+- 构建 conflict event、conflict group 和 participant 之间的关系。
+- 完善不同筛选条件下的空状态和交互检查。
+
+成员 C 重点负责：
+
+- React/Vite 项目框架。
+- 页面整体布局、全局筛选器和状态管理。
+- `StatisticsPanel`、`DetailPanel`、`CaseStudyPanel`。
+- 组件集成、UI 统一和 README 维护
+
 ## 目录结构
 
 ```text
