@@ -10,6 +10,7 @@ export type Battle = {
   locationName?: string;
   participants: string[];
   participantNames?: string[];
+  rawParticipantNames?: string[];
   winnerNames?: string[];
   loserNames?: string[];
   participant1Names?: string[];

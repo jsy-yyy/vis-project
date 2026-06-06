@@ -8,6 +8,7 @@ const rootDir = resolve(__dirname, "..");
 const sourceUrl = "https://dataverse.harvard.edu/api/access/datafile/13390255";
 const sourcePath = process.env.HCED_SOURCE ?? "/private/tmp/hced-data-v3.csv";
 const outputPath = resolve(rootDir, "public/data/hced/conflict_events.csv");
+const participantNormalizationPath = resolve(rootDir, "scripts/participant-normalization.csv");
 
 const minYear = 1886;
 const maxYear = 2003;
@@ -21,6 +22,7 @@ const outputHeaders = [
   "latitude",
   "longitude",
   "participants",
+  "raw_participants",
   "winner",
   "loser",
   "participant_1",
@@ -107,6 +109,10 @@ function normalizeList(value) {
   return parseList(value).join("; ");
 }
 
+function normalizeLookupKey(value) {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 function compact(values) {
   return values.filter((value) => value && value !== "NA").join("; ");
 }
@@ -174,8 +180,72 @@ function validateRows(rows) {
   }
 }
 
+function readParticipantNormalization() {
+  const rows = parseCsv(readFileSync(participantNormalizationPath, "utf8"));
+  const mapping = new Map();
+  const ignored = new Set();
+
+  for (const row of rows) {
+    const rawName = row.raw_name?.trim();
+    const action = row.action?.trim().toLowerCase();
+    const canonicalName = row.canonical_name?.trim();
+
+    if (!rawName) {
+      continue;
+    }
+
+    const lookupKey = normalizeLookupKey(rawName);
+
+    if (action === "map") {
+      if (!canonicalName) {
+        throw new Error(`Participant normalization for "${rawName}" is missing canonical_name`);
+      }
+
+      mapping.set(lookupKey, canonicalName);
+      ignored.delete(lookupKey);
+      continue;
+    }
+
+    if (action === "ignore") {
+      ignored.add(lookupKey);
+      mapping.delete(lookupKey);
+      continue;
+    }
+
+    throw new Error(`Invalid participant normalization action for "${rawName}": ${row.action}`);
+  }
+
+  return { mapping, ignored };
+}
+
+function getCleanParticipants(rawParticipants, normalization) {
+  const participants = [];
+  const seen = new Set();
+
+  for (const rawParticipant of rawParticipants.split(/[;,]/).map((item) => item.trim()).filter(Boolean)) {
+    const lookupKey = normalizeLookupKey(rawParticipant);
+    const canonicalName = normalization.mapping.get(lookupKey);
+
+    if (!canonicalName || normalization.ignored.has(lookupKey)) {
+      continue;
+    }
+
+    const canonicalKey = normalizeLookupKey(canonicalName);
+
+    if (seen.has(canonicalKey)) {
+      continue;
+    }
+
+    participants.push(canonicalName);
+    seen.add(canonicalKey);
+  }
+
+  return participants.join("; ");
+}
+
 ensureSourceDownloaded();
 
+const participantNormalization = readParticipantNormalization();
 const rawRows = parseCsv(readFileSync(sourcePath, "utf8"));
 const rows = rawRows
   .filter((row) => {
@@ -192,25 +262,30 @@ const rows = rawRows
       Number.isFinite(longitude)
     );
   })
-  .map((row) => ({
-    event_id: row.ID,
-    event_name: row.Battle || row.ID,
-    war_name: normalizeList(row.War) || "Unclassified conflict",
-    year: String(Number(row.Year)),
-    location_name: getLocationName(row),
-    latitude: String(Number(row.Latitude)),
-    longitude: String(Number(row.Longitude)),
-    participants: normalizeList(row.Participants) || compact([row["Participant 1"], row["Participant 2"]]),
-    winner: row.Winner || "",
-    loser: row.Loser || "",
-    participant_1: row["Participant 1"] || "",
-    participant_2: row["Participant 2"] || "",
-    country: row.Country || "",
-    outcome: getOutcome(row),
-    event_type: getEventType(row),
-    narrative: getNarrative(row),
-    source: row["Alternative Sources Consulted"] || "Historical Conflict Event Dataset v3",
-  }));
+  .map((row) => {
+    const rawParticipants = normalizeList(row.Participants);
+
+    return {
+      event_id: row.ID,
+      event_name: row.Battle || row.ID,
+      war_name: normalizeList(row.War) || "Unclassified conflict",
+      year: String(Number(row.Year)),
+      location_name: getLocationName(row),
+      latitude: String(Number(row.Latitude)),
+      longitude: String(Number(row.Longitude)),
+      participants: getCleanParticipants(rawParticipants, participantNormalization),
+      raw_participants: rawParticipants,
+      winner: row.Winner || "",
+      loser: row.Loser || "",
+      participant_1: row["Participant 1"] || "",
+      participant_2: row["Participant 2"] || "",
+      country: row.Country || "",
+      outcome: getOutcome(row),
+      event_type: getEventType(row),
+      narrative: getNarrative(row),
+      source: row["Alternative Sources Consulted"] || "Historical Conflict Event Dataset v3",
+    };
+  });
 
 validateRows(rows);
 

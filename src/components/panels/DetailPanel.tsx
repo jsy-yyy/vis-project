@@ -45,9 +45,15 @@ export function DetailPanel({ battle, wars, participants }: DetailPanelProps) {
               <dd>
                 {battle.participantNames?.length
                   ? battle.participantNames.join(", ")
-                  : battle.participants.map((id) => lookupName(id, participants)).join(", ")}
+                  : battle.participants.map((id) => lookupName(id, participants)).join(", ") || "Unmapped"}
               </dd>
             </div>
+            {battle.rawParticipantNames?.length ? (
+              <div>
+                <dt>Raw participants</dt>
+                <dd>{battle.rawParticipantNames.join(", ")}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>Winner</dt>
               <dd>{battle.winnerNames?.join(", ") || "Unknown"}</dd>

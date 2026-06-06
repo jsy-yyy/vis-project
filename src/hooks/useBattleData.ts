@@ -18,6 +18,7 @@ type HcedEventRow = {
   latitude: string;
   longitude: string;
   participants: string;
+  raw_participants: string;
   winner: string;
   loser: string;
   participant_1: string;
@@ -140,6 +141,7 @@ function mapRows(rows: HcedEventRow[]) {
       locationName: row.location_name || undefined,
       participants: participantIds,
       participantNames: rawParticipantNames,
+      rawParticipantNames: parseList(row.raw_participants),
       winnerNames: parseList(row.winner),
       loserNames: parseList(row.loser),
       participant1Names: parseList(row.participant_1),
