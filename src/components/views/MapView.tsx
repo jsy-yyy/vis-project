@@ -62,7 +62,7 @@ const eventTypePalette = [
   "#aeb6ad",
 ];
 
-const countryAliasByKey: Record<string, string> = {
+const countryAliasByKey: Record<string, string | string[]> = {
   america: "United States of America",
   american: "United States of America",
   americans: "United States of America",
@@ -86,9 +86,9 @@ const countryAliasByKey: Record<string, string> = {
   ethiopian: "Ethiopia",
   france: "France",
   french: "France",
-  german: "Germany (Prussia)",
-  germans: "Germany (Prussia)",
-  germany: "Germany (Prussia)",
+  german: ["Germany (Prussia)", "German Federal Republic", "German Democratic Republic"],
+  germans: ["Germany (Prussia)", "German Federal Republic", "German Democratic Republic"],
+  germany: ["Germany (Prussia)", "German Federal Republic", "German Democratic Republic"],
   greece: "Greece",
   greek: "Greece",
   india: "India",
@@ -114,7 +114,7 @@ const countryAliasByKey: Record<string, string> = {
   persian: "Iran (Persia)",
   poland: "Poland",
   polish: "Poland",
-  prussia: "Germany (Prussia)",
+  prussia: ["Germany (Prussia)", "German Federal Republic", "German Democratic Republic"],
   romanian: "Rumania",
   rumania: "Rumania",
   russia: "Russia (Soviet Union)",
@@ -164,7 +164,7 @@ const cshapesSnapshots = [
 ];
 
 const cshapesSnapshotOptions: SnapshotOption[] = [
-  { value: "auto", label: "Auto nearest to current year" },
+  { value: "auto", label: "Auto latest before current year" },
   { value: "off", label: "Historical borders off" },
   ...cshapesSnapshots.map((snapshot) => ({ value: snapshot.date, label: snapshot.label })),
 ];
@@ -203,23 +203,28 @@ function resolveCountryName(value: string, countryLookup: Map<string, string>) {
   const key = normalizeCountryKey(value);
 
   if (!key || key === "draw" || key === "unknown" || key === "na") {
-    return null;
+    return [];
   }
 
   const alias = countryAliasByKey[key];
   if (alias) {
-    return countryLookup.get(normalizeCountryKey(alias)) ?? alias;
+    const aliases = Array.isArray(alias) ? alias : [alias];
+    const resolvedAliases = aliases
+      .map((aliasName) => countryLookup.get(normalizeCountryKey(aliasName)))
+      .filter((countryName): countryName is string => Boolean(countryName));
+
+    return resolvedAliases.length > 0 ? resolvedAliases : [aliases[0]];
   }
 
-  return countryLookup.get(key) ?? null;
+  const countryName = countryLookup.get(key);
+  return countryName ? [countryName] : [];
 }
 
 function resolveCountryNames(values: string[] | undefined, countryLookup: Map<string, string>) {
   const resolved = new Set<string>();
 
   for (const value of values ?? []) {
-    const countryName = resolveCountryName(value, countryLookup);
-    if (countryName) {
+    for (const countryName of resolveCountryName(value, countryLookup)) {
       resolved.add(countryName);
     }
   }
@@ -263,22 +268,13 @@ function without(source: Set<string>, removed: Set<string>) {
 function getBattleCountrySides(battle: Battle, countryLookup: Map<string, string>): CountryHighlight {
   const winnerMain = resolveCountryNames(battle.winnerNames, countryLookup);
   const loserMain = resolveCountryNames(battle.loserNames, countryLookup);
-  const participant1 = resolveCountryNames(battle.participant1Names, countryLookup);
-  const participant2 = resolveCountryNames(battle.participant2Names, countryLookup);
-
-  const shouldReverseParticipants =
-    (hasIntersection(participant1, loserMain) && !hasIntersection(participant1, winnerMain)) ||
-    (hasIntersection(participant2, winnerMain) && !hasIntersection(participant2, loserMain));
-
-  const winnerSideParticipants = shouldReverseParticipants ? participant2 : participant1;
-  const loserSideParticipants = shouldReverseParticipants ? participant1 : participant2;
 
   return {
     selected: new Set(),
     winnerMain,
-    winnerAllies: without(winnerSideParticipants, winnerMain),
+    winnerAllies: new Set(),
     loserMain,
-    loserAllies: without(loserSideParticipants, loserMain),
+    loserAllies: new Set(),
   };
 }
 
@@ -305,21 +301,15 @@ function getCountryConflictHighlight(
 
   for (const battle of battles) {
     const sides = getBattleCountrySides(battle, countryLookup);
-    const winnerSide = new Set([...sides.winnerMain, ...sides.winnerAllies]);
-    const loserSide = new Set([...sides.loserMain, ...sides.loserAllies]);
 
-    if (winnerSide.has(countryName)) {
+    if (sides.winnerMain.has(countryName)) {
       mergeInto(sameMain, without(sides.winnerMain, selected));
-      mergeInto(sameAllies, without(sides.winnerAllies, selected));
       mergeInto(enemyMain, sides.loserMain);
-      mergeInto(enemyAllies, sides.loserAllies);
     }
 
-    if (loserSide.has(countryName)) {
+    if (sides.loserMain.has(countryName)) {
       mergeInto(sameMain, without(sides.loserMain, selected));
-      mergeInto(sameAllies, without(sides.loserAllies, selected));
       mergeInto(enemyMain, sides.winnerMain);
-      mergeInto(enemyAllies, sides.winnerAllies);
     }
   }
 
@@ -399,7 +389,7 @@ function getBattleStyle(battle: Battle, selected: boolean, highlighted: boolean)
 
   return {
     ...(selected ? selectedMarkerStyle : baseMarkerStyle),
-    radius: selected ? selectedMarkerStyle.radius : Math.min(9, 5 + battle.participants.length * 0.35),
+    radius: selected ? selectedMarkerStyle.radius : baseMarkerStyle.radius,
     fillColor: selected ? selectedMarkerStyle.fillColor : getEventTypeColor(battle.type),
   };
 }
@@ -491,12 +481,18 @@ function getBoundaryPopup(properties: CShapesBoundaryProperties) {
   `;
 }
 
-function getNearestSnapshot(year: number) {
-  return cshapesSnapshots.reduce((nearest, snapshot) => {
-    const nearestDistance = Math.abs(nearest.year - year);
-    const snapshotDistance = Math.abs(snapshot.year - year);
-    return snapshotDistance < nearestDistance ? snapshot : nearest;
+function getSnapshotForYear(year: number) {
+  return cshapesSnapshots.reduce((latest, snapshot) => {
+    if (snapshot.year > year) {
+      return latest;
+    }
+
+    return snapshot.year > latest.year ? snapshot : latest;
   }, cshapesSnapshots[0]);
+}
+
+function getFeatureBounds(feature: GeoJSON.Feature<GeoJSON.Geometry>) {
+  return L.geoJSON(feature).getBounds();
 }
 
 export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle }: MapViewProps) {
@@ -510,7 +506,7 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
   const [selectedCountryName, setSelectedCountryName] = useState<string | null>(null);
   const [landCollection, setLandCollection] = useState<LandCollection | null>(null);
   const [boundaryCollection, setBoundaryCollection] = useState<CShapesBoundaryCollection | null>(null);
-  const effectiveSnapshot = selectedSnapshot === "auto" ? getNearestSnapshot(currentYear).date : selectedSnapshot;
+  const effectiveSnapshot = selectedSnapshot === "auto" ? getSnapshotForYear(currentYear).date : selectedSnapshot;
   const countryLookup = useMemo(() => {
     const features = boundaryCollection?.features ?? [];
     const snapshotFeatures =
@@ -519,6 +515,35 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
         : features.filter((feature) => feature.properties.snapshot_date === effectiveSnapshot);
 
     return getCountryLookup(snapshotFeatures.length > 0 ? snapshotFeatures : features);
+  }, [boundaryCollection, effectiveSnapshot]);
+  const countryBoundsLookup = useMemo(() => {
+    const lookup = new Map<string, L.LatLngBounds>();
+
+    if (!boundaryCollection || effectiveSnapshot === "off") {
+      return lookup;
+    }
+
+    for (const feature of boundaryCollection.features) {
+      if (feature.properties.snapshot_date !== effectiveSnapshot) {
+        continue;
+      }
+
+      const bounds = getFeatureBounds(feature);
+      if (!bounds.isValid()) {
+        continue;
+      }
+
+      const key = normalizeCountryKey(feature.properties.statename);
+      const existing = lookup.get(key);
+
+      if (existing) {
+        existing.extend(bounds);
+      } else {
+        lookup.set(key, bounds);
+      }
+    }
+
+    return lookup;
   }, [boundaryCollection, effectiveSnapshot]);
   const eventTypeLegend = useMemo(() => {
     const counts = new Map<string, number>();
@@ -594,17 +619,48 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
     return battleIds;
   }, [battles, countryLookup, highlightedCountries, selectedCountryName]);
 
-  function handleBattleSelect(battle: Battle) {
+  function fitBattleCountries(battle: Battle, options: L.FitBoundsOptions = {}) {
     const map = mapRef.current;
+
+    if (!map) {
+      return false;
+    }
+
+    const highlight = getBattleCountrySides(battle, countryLookup);
+    const countryNames = getAllHighlightedCountries(highlight);
+    let bounds: L.LatLngBounds | null = null;
+
+    for (const countryName of countryNames) {
+      const countryBounds = countryBoundsLookup.get(normalizeCountryKey(countryName));
+
+      if (!countryBounds) {
+        continue;
+      }
+
+      bounds = bounds
+        ? bounds.extend(countryBounds)
+        : L.latLngBounds(countryBounds.getSouthWest(), countryBounds.getNorthEast());
+    }
+
+    if (!bounds?.isValid()) {
+      return false;
+    }
+
+    map.fitBounds(bounds.pad(0.12), {
+      animate: true,
+      duration: 0.55,
+      paddingTopLeft: [20, 20],
+      paddingBottomRight: [20, 20],
+      maxZoom: 5,
+      ...options,
+    });
+
+    return true;
+  }
+
+  function handleBattleSelect(battle: Battle) {
     setSelectedCountryName(null);
     onSelectBattle(battle.id);
-
-    if (map) {
-      map.flyTo([battle.latitude, battle.longitude], Math.max(map.getZoom(), 5), {
-        animate: true,
-        duration: 0.55,
-      });
-    }
   }
 
   function handleCountrySelect(statename: string, layer: L.Layer) {
@@ -784,14 +840,17 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
   useEffect(() => {
     const map = mapRef.current;
     const marker = selectedBattleId ? markerRefs.current.get(selectedBattleId) : null;
+    const battle = selectedBattleId ? battles.find((row) => row.id === selectedBattleId) : null;
 
-    if (!map || !marker) {
+    if (!map || !marker || !battle) {
       return;
     }
 
     marker.openPopup();
-    map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 5), { animate: true, duration: 0.45 });
-  }, [selectedBattleId, battles]);
+    if (!fitBattleCountries(battle, { duration: 0.45 })) {
+      map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 5), { animate: true, duration: 0.45 });
+    }
+  }, [battles, countryBoundsLookup, countryLookup, selectedBattleId]);
 
   return (
     <section className="view-panel map-panel">
@@ -802,9 +861,6 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
       <div className="map-stage" aria-label="Interactive conflict event map">
         <div className="leaflet-map-shell">
           <div ref={mapContainerRef} className="leaflet-map" aria-label="Interactive world conflict event map" />
-          {battles.length === 0 ? (
-            <div className="map-empty-overlay">No conflict events in {currentYear} match the current filters.</div>
-          ) : null}
           <div className="boundary-control">
             <label>
               <span>CShapes 2.0 boundary snapshot</span>

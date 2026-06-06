@@ -110,7 +110,13 @@ CShapes 第一版按十年生成 `1890, 1900, ..., 2000`，并额外加入 `1914
 - `location_name`
 - `latitude`
 - `longitude`
-- `participants`
+- `participants`（由 `Participants` 高频人工映射清洗后的参战方，用于筛选、统计和网络图）
+- `raw_participants`（HCED 原始 `Participants` 规范化后的关键词，用于溯源）
+- `winner`
+- `loser`
+- `participant_1`
+- `participant_2`
+- `country`
 - `outcome`
 - `event_type`
 - `narrative`
@@ -137,6 +143,9 @@ useBattleData(): {
 - `latitude` / `longitude` = HCED coordinates
 - `locationName` = `location_name`
 - `participants` = `participants` parsed to IDs
+- `rawParticipantNames` = `raw_participants` parsed to names
+- `winnerNames` = `winner` parsed to names
+- `loserNames` = `loser` parsed to names
 - `result` = `outcome`
 - `type` = `event_type`
 - `description` = `narrative`

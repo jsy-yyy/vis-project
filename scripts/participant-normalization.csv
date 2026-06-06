@@ -1,0 +1,129 @@
+raw_name,canonical_name,action,note
+British,United Kingdom,map,
+Britain,United Kingdom,map,
+American,United States,map,
+Americans,United States,map,
+US,United States,map,
+German,Germany,map,
+Germans,Germany,map,
+French,France,map,
+Japanese,Japan,map,
+Chinese,China,map,
+China,China,map,
+Russian,Russia,map,
+Russians,Russia,map,
+Soviet,USSR,map,
+Spanish,Spain,map,
+Italian,Italy,map,
+Italians,Italy,map,
+Iraqi,Iraq,map,
+Iraqis,Iraq,map,
+Iraq,Iraq,map,
+Israeli,Israel,map,
+Israel,Israel,map,
+Iranian,Iran,map,
+Iranians,Iran,map,
+Irans,Iran,map,
+Indian,India,map,
+Austrian,Austria-Hungary,map,
+France,France,map,
+Iran,Iran,map,
+Poland,Poland,map,
+Russia,Russia,map,
+Australian,Australia,map,
+Australians,Australia,map,
+Ethiopian,Ethiopia,map,
+Ethiopia,Ethiopia,map,
+Greece,Greece,map,
+Polish,Poland,map,
+Cuba,Cuba,map,
+Italy,Italy,map,
+Syria,Syria,map,
+Libya,Libya,map,
+Mexican,Mexico,map,
+Moroccan,Morocco,map,
+Morocco,Morocco,map,
+Philippines,Philippines,map,
+Germany,Germany,map,
+India,India,map,
+Afghan,Afghanistan,map,
+Sudan,Sudan,map,
+Tunisia,Tunisia,map,
+Belgium,Belgium,map,
+Dutch,Netherlands,map,
+Korea,Korea,map,
+Pakistani,Pakistan,map,
+Saudi,Saudi Arabia,map,
+North Vietnamese,North Vietnam,map,
+South Vietnamese,South Vietnam,map,
+Egypt,Egypt,map,
+Lebanon,Lebanon,map,
+Spain,Spain,map,
+Finland,Finland,map,
+Japan,Japan,map,
+Turkey,Turkey,map,
+Arabs,,ignore,generic descriptor
+Egyptian,Egypt,map,
+Libyan,Libya,map,
+Syrian,Syria,map,
+Algeria,Algeria,map,
+Cuban,Cuba,map,
+Eritrea,Eritrea,map,
+Greek,Greece,map,
+Mexico,Mexico,map,
+North Korean,North Korea,map,
+Belgian,Belgium,map,
+Irish,Ireland,map,
+South Korean,South Korea,map,
+Bulgaria,Bulgaria,map,
+Indonesian,Indonesia,map,
+Pakistan,Pakistan,map,
+Romanian,Romania,map,
+Somaliland,Somaliland,map,
+Bolivian,Bolivia,map,
+Czech,Czechoslovakia,map,
+Norway,Norway,map,
+Paraguayan,Paraguay,map,
+Serbia,Serbia,map,
+Turkish,,ignore,ambiguous between Ottoman Empire and Turkey
+Turks,,ignore,ambiguous between Ottoman Empire and Turkey
+Arab,,ignore,generic descriptor
+Communist,,ignore,generic descriptor
+Communists,,ignore,generic descriptor
+Nationalist,,ignore,generic descriptor
+Nationalists,,ignore,generic descriptor
+Republican,,ignore,generic descriptor
+Republicans,,ignore,generic descriptor
+Anglo,,ignore,generic descriptor
+Sino-Japanese,,ignore,war descriptor
+Italo,,ignore,generic descriptor
+Muslim,,ignore,generic descriptor
+Jewish,,ignore,generic descriptor
+Northern Africa,,ignore,region
+North Africa,,ignore,region
+Manchuria,,ignore,region
+Beijing,,ignore,place
+Baghdad,,ignore,place
+Basra,,ignore,place
+Manila,,ignore,place
+Warsaw,,ignore,place
+Kabul,,ignore,place
+Seoul,,ignore,place
+Jerusalem,,ignore,place
+Madrid,,ignore,place
+Gaza,,ignore,place
+Riyadh,,ignore,place
+Saigon,,ignore,place
+Tianjin,,ignore,place
+Belgrade,,ignore,place
+Shenyang,,ignore,place
+Nanjing,,ignore,place
+Vilna,,ignore,place
+Addis Ababa,,ignore,place
+Damascus,,ignore,place
+Moscow,,ignore,place
+Minsk,,ignore,place
+Pyongyang,,ignore,place
+Riga,,ignore,place
+Hurtgen,,ignore,place
+Khorramshahr,,ignore,place
