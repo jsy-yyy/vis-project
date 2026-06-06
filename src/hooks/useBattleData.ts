@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Battle, Participant, War } from "../types/domain";
+import type { Actor, Battle, Participant, War } from "../types/domain";
 
 type BattleDataState = {
   battles: Battle[];
@@ -19,6 +19,7 @@ type HcedEventRow = {
   longitude: string;
   participants: string;
   raw_participants: string;
+  actors: string;
   winner: string;
   loser: string;
   participant_1: string;
@@ -103,6 +104,19 @@ function parseList(value = "") {
     .filter(Boolean);
 }
 
+function parseActors(value = ""): Actor[] {
+  if (!value.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value) as Actor[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function mapRows(rows: HcedEventRow[]) {
   const warYears = new Map<string, { id: string; name: string; startYear: number; endYear: number }>();
   const participantLookup = new Map<string, string>();
@@ -111,10 +125,12 @@ function mapRows(rows: HcedEventRow[]) {
     const year = Number(row.year);
     const warName = row.war_name || "Unclassified conflict";
     const warId = slugify(warName);
+    const actors = parseActors(row.actors);
     const rawParticipantNames = parseList(row.participants);
     const participantIds = rawParticipantNames.map((participantName) => {
       const participantId = slugify(participantName);
-      participantLookup.set(participantId, participantName);
+      const actor = actors.find((item) => item.name === participantName && item.networkEligible);
+      participantLookup.set(participantId, actor?.name ?? participantName);
       return participantId;
     });
     const war = warYears.get(warId);
@@ -140,6 +156,7 @@ function mapRows(rows: HcedEventRow[]) {
       longitude: Number(row.longitude),
       locationName: row.location_name || undefined,
       participants: participantIds,
+      actors,
       participantNames: rawParticipantNames,
       rawParticipantNames: parseList(row.raw_participants),
       winnerNames: parseList(row.winner),
@@ -162,7 +179,7 @@ function mapRows(rows: HcedEventRow[]) {
   });
 
   const participants: Participant[] = Array.from(participantLookup.entries())
-    .map(([id, name]) => ({ id, name, type: "other" as const }))
+    .map(([id, name]) => ({ id, name, type: "country" as const }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return { battles, wars, participants };

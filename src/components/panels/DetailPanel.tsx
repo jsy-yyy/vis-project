@@ -11,6 +11,11 @@ function lookupName(id: string, rows: Array<{ id: string; name: string }>) {
   return rows.find((row) => row.id === id)?.name ?? id;
 }
 
+function formatActor(actor: NonNullable<Battle["actors"]>[number]) {
+  const target = actor.mapTarget ? ` -> ${actor.mapTarget}` : "";
+  return `${actor.name}${target} (${actor.role}, ${actor.type}, ${actor.confidence}, ${actor.status})`;
+}
+
 export function DetailPanel({ battle, wars, participants }: DetailPanelProps) {
   return (
     <section className="side-panel detail-panel">
@@ -62,6 +67,12 @@ export function DetailPanel({ battle, wars, participants }: DetailPanelProps) {
               <dt>Loser</dt>
               <dd>{battle.loserNames?.join(", ") || "Unknown"}</dd>
             </div>
+            {battle.actors?.length ? (
+              <div>
+                <dt>Actors</dt>
+                <dd>{battle.actors.map(formatActor).join("; ")}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>Result</dt>
               <dd>{battle.result ?? "Unknown"}</dd>

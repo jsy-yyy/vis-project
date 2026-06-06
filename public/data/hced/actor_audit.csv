@@ -1,0 +1,468 @@
+raw_name,source_field,status,type,count,examples,suggested_action
+Spanish Nationalists,Winner,mapped_internal,faction,30,"Alcazar1936; Alto de Leon1936; Badajoz1936; Barcelona, Spain1936; Barcelona, Spain1938-1939",check_internal_mapping
+Spanish Republicans,Loser,mapped_internal,faction,30,"Alcazar1936; Alto de Leon1936; Badajoz1936; Barcelona, Spain1936; Barcelona, Spain1938-1939",check_internal_mapping
+Chinese Communists,Winner,mapped_internal,faction,28,Beijing1949; Beijing-Tianjin1948; Changchun1946; Changchun1948; Chenguanzhuang1949,check_internal_mapping
+Bolsheviks,Winner,mapped_internal,faction,25,Bokhara1920; Chelyabinsk1919; Chita1920; Don Basin1919; Ekaterinburg1919,check_internal_mapping
+Chinese Nationalists,Loser,mapped_internal,faction,25,Beijing-Tianjin1948; Changchun1946; Changchun1948; Chenguanzhuang1949; Huaihai1948,check_internal_mapping
+Viet Cong,Loser,mapped_internal,rebel_group,25,An Loc1972; A Shau1966; Binh Gia1964; Bon Son1966; Chau Nhai1966,check_internal_mapping
+Bolsheviks,Loser,mapped_internal,faction,20,Archangelsk1919; Belaya Glina1918; Chelyabinsk1918; Ekaterinburg1918; Ekaterinodar (2nd)1918,check_internal_mapping
+Chinese Communists,Loser,mapped_internal,faction,17,Anhui Incident1941; Baoji1948; Canton1928; Changsha1930; Ching Kan Shan1928,check_internal_mapping
+Chinese Nationalists,Winner,mapped_internal,faction,16,Anhui Incident1941; Canton1928; Changsha1930; Ching Kan Shan1928; Guangchang1934,check_internal_mapping
+Constitutionalist Rebels,Winner,mapped_internal,rebel_group,15,Ciudad Juarez1913; Ciudad Victoria1913; Durango1913; Matamaros1913; Ojinaga1913,check_internal_mapping
+Huerta Regime,Loser,mapped_internal,faction,15,Ciudad Juarez1913; Ciudad Victoria1913; Durango1913; Matamaros1913; Ojinaga1913,check_internal_mapping
+Kuomintang,Winner,mapped_internal,faction,15,Baoding1928; Baoji1948; Beijing1928; Changsha1926; Fuzhou1926,check_internal_mapping
+Russian Whites,Loser,mapped_internal,faction,14,Chita1920; Kuban1920; Novorossisk1920; Odessa1919; Perekop1920,check_internal_mapping
+Arab Rebels,Winner,mapped_internal,rebel_group,12,Aleppo1918; Aqaba1917; Damascus1918; Dera1918; Hejaz1916,check_internal_mapping
+Cuban Rebels,Winner,mapped_internal,rebel_group,12,"Cacarajicara1896; Jobito1895; La Plata, Cuba1957; Mal Tiempo1895; Manacal1895",check_internal_mapping
+Russian Whites,Winner,mapped_internal,faction,11,Belaya Glina1918; Melitopol1920; Novocherkassk1918; Orenburg1917; Peregonovka1919,check_internal_mapping
+Spanish Nationalists,Loser,mapped_internal,faction,10,Belchite1937; Cape Palos1938; Cape Palos1940; Corunna Road1936; Gijon1936,check_internal_mapping
+Spanish Republicans,Winner,mapped_internal,faction,10,Belchite1937; Cape Palos1938; Cape Palos1940; Corunna Road1936; Gijon1936,check_internal_mapping
+Cuban Rebels,Loser,mapped_internal,rebel_group,8,"Artemisa1896; Candelaria, Cuba1896; Cienfuegos1957; Coliseo1895; Dos Rios1895",check_internal_mapping
+Taliban,Loser,mapped_internal,rebel_group,8,Kabul2001; Kandahar2001; Kunduz2001; Mazar-i-Sharif2001; Operation Anaconda2002,check_internal_mapping
+White Russians,Loser,mapped_internal,faction,8,Chelyabinsk1919; Don Basin1919; Ekaterinburg1919; Ekaterinodar (1st)1918; Kiatkha1921,check_internal_mapping
+Greek Communists,Loser,mapped_internal,faction,7,Deskarti1946; Florina1947; Florina1949; Konitsa1947; Metsovo1947,check_internal_mapping
+Sudanese Mahdists,Loser,mapped_internal,faction,7,"Abu Hamed1897; Firket1896; Gemaizeh1888; Hafir, Sudan1896; Tokar1891",check_internal_mapping
+Biafran Rebels,Loser,mapped_internal,rebel_group,6,Calabar1967; Enugu1967; Onitsha1967; Owerri1968; Port Harcourt1968,check_internal_mapping
+Irish Republicans,Loser,mapped_internal,faction,6,Clashmealcon Caves1923; Clonmel1922; Cork1922; Four Courts1922; Kilmallock1922,check_internal_mapping
+Mujahideen,Loser,mapped_internal,rebel_group,6,Ali Kheyl1984; Jalalabad1989; Khost1985; Panjshir Valley1984; Parrots Beak1985,check_internal_mapping
+Northern Alliance,Winner,mapped_internal,faction,6,Kabul2001; Kandahar2001; Kunduz2001; Mazar-i-Sharif2001; Qala-i-Jangi2001,check_internal_mapping
+Somali Islamists,Loser,mapped_internal,rebel_group,6,Ferdiddin1901; Galiabur1920; Illig1904; OK Pass1919; Samala1901,check_internal_mapping
+Viet Minh,Winner,mapped_internal,faction,6,Cao-Bang1950; Dien Bien Phu1953; Dong-Khe1950; Hoa Binh1951; Muong-Khoua1953,check_internal_mapping
+Viet Minh,Loser,mapped_internal,faction,6,Day River1951; Mao Khe1951; Nghia Lo1951; Red River Delta1950; Viet Bac1946,check_internal_mapping
+Wu Beifu,Loser,mapped_internal,faction,6,Hesheng1926; Pingjiang1926; Tingsiqiao1926; Tingzu1926; Wuchang1926,check_internal_mapping
+al Qaeda,Loser,mapped_internal,rebel_group,5,Mazar-i-Sharif2001; Operation Anaconda2002; Operation Mongoose2003; Qala-i-Jangi2001; Tora Bora2001,check_internal_mapping
+Greek Government,Winner,mapped_internal,faction,5,Deskarti1946; Grammos1949; Karditsa1948; Konitsa1947; Metsovo1947,check_internal_mapping
+Iraqi Rebels,Loser,mapped_internal,rebel_group,5,Jarbuiyah1920; Kufah1920; Rumaithah1920; Samawah1920; Tel Afar1920,check_internal_mapping
+Moros,Loser,mapped_internal,rebel_group,5,Bacolod1903; Bayan1902; Bud Bagsak1913; Lake Seit1903; Malala1905,check_internal_mapping
+Philippine Rebels,Winner,mapped_internal,rebel_group,5,Baler1896; Binakayan1896; Imus1896; Puray1897; Zapote Bridge1897,check_internal_mapping
+Rashidis,Loser,mapped_internal,faction,5,Bukairiya1904; Dilam1902; Hail1921; Rawdhat al Muhanna1906; Riyadh1902,check_internal_mapping
+Chadian Rebels,Loser,mapped_internal,rebel_group,4,Abeche1983; Iriba1990; N'Djamena1980; Oum Chalouba1983,check_internal_mapping
+FLN,Loser,mapped_internal,rebel_group,4,Algiers1956-1957; Frontier1958; Kabylie1959; Souk-Ahras1958,check_internal_mapping
+Greek Communist Rebels,Loser,mapped_internal,faction,4,Grammos1949; Karditsa1948; Karpenision1949; Kastoria1948,check_internal_mapping
+Kuomintang,Loser,mapped_internal,faction,4,Beijing1949; Nanchang1913; Nanchang1928; Nanjing1911,check_internal_mapping
+Mexican Rebels,Winner,mapped_internal,rebel_group,4,Ciudad Juarez1911; Columbus1916; Mexico City1913; Rellano (1st)1912,check_internal_mapping
+Nama Tribe,Loser,mapped_internal,faction,4,Naris1904; Naukluf1894; Vaalgras1905; Van Rooisvlei1928,check_internal_mapping
+Palestinians,Loser,mapped_internal,faction,4,Nazareth1948; Safad1948; Tel-el-Zataar1976; Tiberias1948,check_internal_mapping
+Philippine Rebels,Loser,mapped_internal,rebel_group,4,Naic1897; San Isidro1896; Silang1897; Zapote Bridge1896,check_internal_mapping
+Rashidis,Winner,mapped_internal,faction,4,Jirab1915; Kinzan1915; Mulaydah1891; Riyadh1887,check_internal_mapping
+Zulu Rebels,Loser,mapped_internal,rebel_group,4,Bobe1906; Hlophekhulu1888; Mome1906; Mpukonyoni1906,check_internal_mapping
+Boxers,Loser,mapped_internal,rebel_group,3,Beijing1900; Tianjin (1st)1900; Tianjin (2nd)1900,check_internal_mapping
+Chadian Government,Winner,mapped_internal,faction,3,Ati1978; Iriba1990; N'Djamena1980,check_internal_mapping
+Chilean Presidentialists,Loser,mapped_internal,faction,3,Concon1891; Placilla1891; Pozo Almonte1891,check_internal_mapping
+Constitutionalists,Winner,mapped_internal,faction,3,"Agua Prieta1915; Celaya1915; Trinidad, Mexico1915",check_internal_mapping
+Druze Rebels,Loser,mapped_internal,rebel_group,3,Damascus1925; Damascus1926; Rashaya1925,check_internal_mapping
+Finnish Whites,Winner,mapped_internal,faction,3,Tampere1918; Vilppula1918; Vyborg1918,check_internal_mapping
+Greek Communist Rebels,Winner,mapped_internal,faction,3,"Athens, Greece1944; Grevena1947; Litokhoro1946",check_internal_mapping
+Hashemites,Loser,mapped_internal,faction,3,"Medina, Saudi Arabia1925; Taif1924; Turabah1919",check_internal_mapping
+Indonesian Rebels,Loser,mapped_internal,rebel_group,3,Jogjakarta1948; Marga1946; Surabaya1945,check_internal_mapping
+Matabeleland,Loser,unmapped,unknown,3,Bembesi1893; Empadine1893; Shangani1893,add_actor_normalization
+Mexican Government,Loser,mapped_internal,faction,3,Ciudad Juarez1911; Cuautla1911; Mexico City1913,check_internal_mapping
+Palestinian Arabs,Loser,mapped_internal,faction,3,Haifa1948; Kastel1948; Lydda-Ramleh1948,check_internal_mapping
+Russian Bolsheviks,Loser,unmapped,unknown,3,Alexandrovsk1919; Rautu1918; Vyborg1918,add_actor_normalization
+Tidikelt Tribes,Loser,unmapped,unknown,3,Ingosten1899; In Rhar1900; In Salah1900,add_actor_normalization
+Viet Cong,Winner,mapped_internal,rebel_group,3,Ap Bac1963; Bien Hoa1964; Pleiku1965,check_internal_mapping
+Abyssinia,Loser,unmapped,unknown,2,Debra Sina1887; Gallabat1889,add_actor_normalization
+Afghan Communists,Winner,unmapped,unknown,2,Panjshir Valley1984; Parrots Beak1985,add_actor_normalization
+Anti-Treaty IRA,Loser,unmapped,unknown,2,Tipperary1922; Waterford1922,add_actor_normalization
+Arab Rebels,Loser,mapped_internal,rebel_group,2,Es Salt (2nd)1918; Pangani1889,check_internal_mapping
+Arabs,Loser,unmapped,unknown,2,Jaffa1949; Two Palms1912,add_actor_normalization
+Bali,Loser,unmapped,unknown,2,Denpasar1906; Mataram1894,add_actor_normalization
+Biafran Rebels,Winner,mapped_internal,rebel_group,2,Abagana1968; Benin1967,check_internal_mapping
+Blancos,Loser,unmapped,unknown,2,Masoller1904; Tupambae1904,add_actor_normalization
+Brazil,Winner,unmapped,unknown,2,Canudos1897; Gothic Line1944,add_actor_normalization
+Brunei Rebels,Loser,unmapped,unknown,2,Brunei1962; Seria1962,add_actor_normalization
+Chadian Rebels,Winner,mapped_internal,rebel_group,2,N'Djamena1979; Ouaddai1990,check_internal_mapping
+Chari,Loser,unmapped,unknown,2,Kouno1899; Kousseri1900,add_actor_normalization
+Chechen Rebels,Loser,unmapped,unknown,2,Grozny1995; Grozny2000,add_actor_normalization
+Chilean Congressists,Winner,unmapped,unknown,2,Concon1891; Pozo Almonte1891,add_actor_normalization
+Chitral,Loser,unmapped,unknown,2,Chitral1895; Malakand1895,add_actor_normalization
+Colombia,Winner,unmapped,unknown,2,Gueppi1933; Palonegro1900,add_actor_normalization
+Colombia,Loser,unmapped,unknown,2,Old Baldy1953; Peralonso1899,add_actor_normalization
+Colorados,Winner,unmapped,unknown,2,Masoller1904; Tupambae1904,add_actor_normalization
+Constitutionalist Rebels,Loser,mapped_internal,rebel_group,2,Chihuahua1913; Satillo1913,check_internal_mapping
+Conventionists,Loser,unmapped,unknown,2,"Agua Prieta1915; Trinidad, Mexico1915",add_actor_normalization
+Costa Rican Conservatives,Winner,unmapped,unknown,2,Ochomogo1948; Santa Rosa de Copan1955,add_actor_normalization
+Cuban Government,Winner,unmapped,unknown,2,Cienfuegos1957; Moncada1953,add_actor_normalization
+Czechoslovak Legion,Winner,unmapped,unknown,2,Chelyabinsk1918; Ekaterinburg1918,add_actor_normalization
+Druze Rebels,Winner,mapped_internal,rebel_group,2,Kafr1925; Mazraa1925,check_internal_mapping
+El Salvador,Loser,unmapped,unknown,2,El Jicaro1906; Namasigue1907,add_actor_normalization
+Eritrean Rebels,Winner,unmapped,unknown,2,Assab1991; Massawa1990,add_actor_normalization
+Feng Yuxiang,Winner,unmapped,unknown,2,Luoyang1927; Tianjin1925,add_actor_normalization
+Filippino Rebels,Loser,unmapped,unknown,2,Dasmarinas1897; San Jacinto1899,add_actor_normalization
+Greek Government,Loser,mapped_internal,faction,2,Grevena1947; Naoussa1946,check_internal_mapping
+Guinean Rebels,Winner,unmapped,unknown,2,Como1964; Guiledge1973,add_actor_normalization
+Herero Rebels,Loser,unmapped,unknown,2,Okaharui1904; Waterberg1904,add_actor_normalization
+Honduran Rebels,Winner,unmapped,unknown,2,Tegucicalpa1894; Tegucicalpa1924,add_actor_normalization
+Huerta Regime,Winner,mapped_internal,faction,2,Chihuahua1913; Satillo1913,check_internal_mapping
+Incident,Winner,unmapped,unknown,2,Waima Incident1893; Yangzi Incident1949,add_actor_normalization
+Indonesian Government,Winner,unmapped,unknown,2,Bukittingi1958; Manado1958,add_actor_normalization
+Irish Rebels,Loser,unmapped,unknown,2,Balbriggan1920; Dublin1916,add_actor_normalization
+Irish Rebels,Participant 2,unmapped,unknown,2,Bloody Sunday1920; Cork1920,add_actor_normalization
+Kuwait,Loser,unmapped,unknown,2,Hamad1920; Kuwait1990,add_actor_normalization
+Laos,Winner,unmapped,unknown,2,Lam Son1971; Luang Prabang1953,add_actor_normalization
+Laotian Communists,Winner,unmapped,unknown,2,Nam Tha1962; Sala Phou Khoun1975,add_actor_normalization
+Latvia,Winner,unmapped,unknown,2,Riga (1st)1917; Riga (2nd)1919,add_actor_normalization
+Lebanese Christian Militia,Loser,unmapped,unknown,2,Beirut1978; Beirut1990,add_actor_normalization
+Mahdists,Loser,unmapped,unknown,2,Atbara1898; Dakhila1898,add_actor_normalization
+Mexican Government,Winner,mapped_internal,faction,2,Aguascalientes1915; Casas Grandes1911,check_internal_mapping
+Mexican Rebels,Loser,mapped_internal,rebel_group,2,Casas Grandes1911; Rellano (2nd)1912,check_internal_mapping
+Moro Rebels,Loser,unmapped,unknown,2,Mount Talipao1913; Pangpang1904,add_actor_normalization
+Mujahideen,Winner,mapped_internal,rebel_group,2,Khost1991; Panjshir Valley1982,check_internal_mapping
+Nama,Winner,unmapped,unknown,2,Hartebeestmund1905; Hornkranz1893,add_actor_normalization
+Nationalists,Winner,mapped_internal,faction,2,Santander1937; Zhumadian1927,check_internal_mapping
+NATO,Winner,unmapped,unknown,2,Kossovo1999; Operation Deliberate Force1995,add_actor_normalization
+Oman,Winner,unmapped,unknown,2,Jebel Akhdar1971; Mirbat1972,add_actor_normalization
+Omani Leftist Rebels,Loser,unmapped,unknown,2,Jebel Akhdar1958; Jebel Akhdar1971,add_actor_normalization
+Omani Rebels,Loser,unmapped,unknown,2,Bait-al-Falaj1915; Mirbat1972,add_actor_normalization
+Pancho Villa Rebels,Loser,unmapped,unknown,2,Aguascalientes1915; Naco1914,add_actor_normalization
+Polisario,Winner,unmapped,unknown,2,Oum Droussa1977; Tan-Tan1979,add_actor_normalization
+Republic of Formosa,Loser,unmapped,unknown,2,Baguashan1895; Keelung1895,add_actor_normalization
+Republika Srpska,Winner,unmapped,unknown,2,Bosanska Posavina1992; Jajce1992,add_actor_normalization
+Senussi Rebels,Loser,unmapped,unknown,2,Agagia1916; Al Khufrah1931,add_actor_normalization
+Somali Islamist Rebels,Loser,unmapped,unknown,2,Erego1902; Jidballi1904,add_actor_normalization
+Sumatran Rebels,Loser,unmapped,unknown,2,Bukittingi1958; Manado1958,add_actor_normalization
+Syrian Druze Rebels,Loser,unmapped,unknown,2,Suwayda1925; Suwayda1926,add_actor_normalization
+Tanzania,Winner,unmapped,unknown,2,Kagera1978; Kampala1979,add_actor_normalization
+The Mahdiyya,Winner,unmapped,unknown,2,Debra Sina1887; Gallabat1889,add_actor_normalization
+Uganda,Loser,unmapped,unknown,2,Kagera1978; Kampala1979,add_actor_normalization
+United Nations,Winner,unmapped,unknown,2,Elizabethville1961; Heartbreak Ridge1951,add_actor_normalization
+Venezuela,Winner,unmapped,unknown,2,La Victoria1902; Puerto Cabello1962,add_actor_normalization
+Venezuela,Loser,unmapped,unknown,2,"San Pedro, Venezuela1892; Tocuyito1899",add_actor_normalization
+Warlord Sun Zhuanfang,Loser,unmapped,unknown,2,Beijing1928; Nanchang1926,add_actor_normalization
+Western Saharan Rebels,Winner,unmapped,unknown,2,El Ayoun1958; Lebouirate1979,add_actor_normalization
+White Russians,Winner,mapped_internal,faction,2,Ekaterinodar (2nd)1918; Kazan1918,check_internal_mapping
+Yaqui,Loser,unmapped,unknown,2,Anil1886; Buatachive1886,add_actor_normalization
+Zaia,Winner,unmapped,unknown,2,El Herri1914; ElKsiba1913,add_actor_normalization
+Zhang Zuolin,Winner,unmapped,unknown,2,Tianjin1926; Xinmintun1925,add_actor_normalization
+Zhili,Winner,unmapped,unknown,2,Changxindian1922; Zhuozhou1920,add_actor_normalization
+Abdur Rahman,Winner,unmapped,unknown,1,Ghaznigak1888,add_actor_normalization
+Abyssinia,Winner,unmapped,unknown,1,Amba Alagi1895,add_actor_normalization
+Accidental incident,Winner,unmapped,unknown,1,Dogger Bank1904,add_actor_normalization
+Aceh,Loser,unmapped,unknown,1,Gayoland1904,add_actor_normalization
+Afghan Communists,Loser,unmapped,unknown,1,Kabul1992,add_actor_normalization
+Afghan Government,Loser,unmapped,unknown,1,Khost1991,add_actor_normalization
+Afghan Marxists,Winner,unmapped,unknown,1,Kabul1978,add_actor_normalization
+Afghan Mujahideen,Winner,unmapped,unknown,1,Kabul1992,add_actor_normalization
+Afghan Mujahideen,Loser,unmapped,unknown,1,Magistral1987,add_actor_normalization
+Afghan Rebels,Loser,unmapped,unknown,1,Herat1978,add_actor_normalization
+Aflonso V,Winner,unmapped,unknown,1,Alfarrobeira1986,add_actor_normalization
+Afridi Rebels,Loser,unmapped,unknown,1,Dargai1897,add_actor_normalization
+Afridi Tribe,Winner,unmapped,unknown,1,Landi Kotal1897,add_actor_normalization
+Afridi Tribesmen,Winner,unmapped,unknown,1,Saragarhi1897,add_actor_normalization
+Ahmed Shah Masud,Loser,unmapped,unknown,1,Kabul1996,add_actor_normalization
+Al Qaeda,Loser,mapped_internal,rebel_group,1,Kunduz2001,check_internal_mapping
+Albania,Loser,unmapped,unknown,1,Albania1939,add_actor_normalization
+Anhui,Loser,unmapped,unknown,1,Zhuozhou1920,add_actor_normalization
+Anti Treaty IRA,Loser,unmapped,unknown,1,Limerick1922,add_actor_normalization
+Arab forces,Loser,unmapped,unknown,1,Huleiqat1948,add_actor_normalization
+Arab Forces,Loser,unmapped,unknown,1,El Henni (1st)1911,add_actor_normalization
+Arab Slave Traders,Loser,unmapped,unknown,1,Bagamoyo1889,add_actor_normalization
+Armenia,Loser,unmapped,unknown,1,Baku1918,add_actor_normalization
+Armenia,Winner,unmapped,unknown,1,Sardarapat1918,add_actor_normalization
+Ashanti,Loser,unmapped,unknown,1,Ashanti1900,add_actor_normalization
+Ashanti Rebels,Loser,unmapped,unknown,1,Aboasa1900,add_actor_normalization
+Austro-Hungary,Winner,unmapped,unknown,1,Tarnopol1917,add_actor_normalization
+Babrak Kamal,Winner,unmapped,unknown,1,Kabul1979,add_actor_normalization
+Bali,Winner,unmapped,unknown,1,Cakranegara1894,add_actor_normalization
+Batista Forces,Winner,unmapped,unknown,1,Alegria del Pio1956,add_actor_normalization
+Batista Supporters,Loser,unmapped,unknown,1,El Uvero1957,add_actor_normalization
+Bedouin,Loser,unmapped,unknown,1,Hama1925,add_actor_normalization
+Bedouin Rebels,Loser,unmapped,unknown,1,Museifre1925,add_actor_normalization
+Belarussan Cossacks,Winner,unmapped,unknown,1,Szczara1920,add_actor_normalization
+Bengali Rebels,Loser,unmapped,unknown,1,Dacca1971,add_actor_normalization
+Benin,Winner,unmapped,unknown,1,Ugbine1897,add_actor_normalization
+Berber Tribesmen,Loser,unmapped,unknown,1,Sidi Sliman1915,add_actor_normalization
+Biafran Rebels,Participant 1,mapped_internal,rebel_group,1,Abagana1968,check_internal_mapping
+Bosnia and Hercegovina,Participant 1,unmapped,unknown,1,Mostar1994,add_actor_normalization
+Bosnia and Hercegovina,Loser,unmapped,unknown,1,Srebrenica1993,add_actor_normalization
+Bosnia and Hercegovina; Croatian Republic of Herzeg-Bosnia,Loser,unmapped,unknown,1,Bosanska Posavina1992,add_actor_normalization
+Bosnia-Hercegovina,Winner,unmapped,unknown,1,Gornji Vakuf1993,add_actor_normalization
+Bosnia-Hercegovina,Loser,unmapped,unknown,1,Jajce1992,add_actor_normalization
+Bosnia-Hercegovnia,Winner,unmapped,unknown,1,Bihac1992,add_actor_normalization
+Brazil,Loser,unmapped,unknown,1,Canudos1896,add_actor_normalization
+Brunei,Winner,unmapped,unknown,1,Brunei1962,add_actor_normalization
+Buryats,Loser,unmapped,unknown,1,Kiatkha1921,add_actor_normalization
+Cambodian Rebels,Winner,unmapped,unknown,1,Phnom Penh1979,add_actor_normalization
+Cambodian Royalists,Loser,unmapped,unknown,1,Phnom Penh1975,add_actor_normalization
+Canudos,Winner,unmapped,unknown,1,Canudos1896,add_actor_normalization
+Canudos,Loser,unmapped,unknown,1,Canudos1897,add_actor_normalization
+Castro Forces,Loser,unmapped,unknown,1,Alegria del Pio1956,add_actor_normalization
+Castro Supporters,Winner,unmapped,unknown,1,El Uvero1957,add_actor_normalization
+Chadian Government,Loser,mapped_internal,faction,1,N'Djamena1979,check_internal_mapping
+Chadian Muslims,Winner,unmapped,unknown,1,Niellim1899,add_actor_normalization
+Chadian Rebels,Participant 2,mapped_internal,rebel_group,1,Abeche1983,check_internal_mapping
+Chilean Congress,Loser,unmapped,unknown,1,Caldera Bay1891,add_actor_normalization
+Chilean Congressist,Winner,unmapped,unknown,1,Placilla1891,add_actor_normalization
+Chilean Congressists,Loser,unmapped,unknown,1,Huara1891,add_actor_normalization
+Chilean Presidency,Winner,unmapped,unknown,1,Caldera Bay1891,add_actor_normalization
+Chilean Presidentialists,Winner,mapped_internal,faction,1,Huara1891,check_internal_mapping
+Chinese Boxer Rebels,Winner,unmapped,unknown,1,Beicang1900,add_actor_normalization
+Chinese Communists,Participant 1,mapped_internal,faction,1,Kaifeng1948,check_internal_mapping
+Chinese Nationalists,Participant 2,mapped_internal,faction,1,Kaifeng1948,check_internal_mapping
+Chinese Rebels,Loser,unmapped,unknown,1,Hankou1911,add_actor_normalization
+Chinese Republican Rebels,Loser,unmapped,unknown,1,Hanyang1911,add_actor_normalization
+Chitrali Rebels,Winner,unmapped,unknown,1,Panjkora1895,add_actor_normalization
+Chitrali Tribes,Loser,unmapped,unknown,1,Nisa Col1895,add_actor_normalization
+Civilians,Participant 2,unmapped,unknown,1,"Santa Isabel, Sonora1916",add_actor_normalization
+Colombian Liberal Rebels,Loser,unmapped,unknown,1,Palonegro1900,add_actor_normalization
+Colombian Liberal Rebels,Winner,unmapped,unknown,1,Peralonso1899,add_actor_normalization
+Congo,Winner,unmapped,unknown,1,Stanleyville1964,add_actor_normalization
+Congolese Leftists,Loser,unmapped,unknown,1,Stanleyville1964,add_actor_normalization
+Congressists,Winner,unmapped,unknown,1,San Francisco1891,add_actor_normalization
+Conservatives,Loser,unmapped,unknown,1,Gatazo1895,add_actor_normalization
+Conventionalists,Loser,unmapped,unknown,1,Celaya1915,add_actor_normalization
+Costa Rica,Loser,unmapped,unknown,1,San Isidro del General1948,add_actor_normalization
+Costa Rica,Winner,unmapped,unknown,1,Santa Rosa de Copan1919,add_actor_normalization
+Costa Rican Christian Socialists,Loser,unmapped,unknown,1,Santa Rosa de Copan1955,add_actor_normalization
+Costa Rican Leftists,Loser,unmapped,unknown,1,Ochomogo1948,add_actor_normalization
+Costa Rican Rebels,Winner,unmapped,unknown,1,San Isidro del General1948,add_actor_normalization
+Costa Rican Rebels,Loser,unmapped,unknown,1,Santa Rosa de Copan1919,add_actor_normalization
+Croatian Republic of Herzeg Bosnia,Loser,unmapped,unknown,1,Gornji Vakuf1993,add_actor_normalization
+Croatian Republic of Herzeg-Bosnia,Loser,unmapped,unknown,1,Jajce1992,add_actor_normalization
+Croatian Republic of Herzeg-Bosnia,Participant 2,unmapped,unknown,1,Mostar1994,add_actor_normalization
+Croatian Serbs,Winner,unmapped,unknown,1,Vukovar1991,add_actor_normalization
+Cuban Anticommunist Rebels,Loser,unmapped,unknown,1,Bay of Pigs1961,add_actor_normalization
+Cuban Government,Loser,unmapped,unknown,1,Sierra Maestra1958,add_actor_normalization
+Cuban Revolutionaries,Loser,unmapped,unknown,1,Iguara1895,add_actor_normalization
+Cyprus,Loser,unmapped,unknown,1,Kyrenia1974,add_actor_normalization
+Czech Legion,Winner,unmapped,unknown,1,Kazan1918,add_actor_normalization
+Czech Legion,Loser,unmapped,unknown,1,Samara1918,add_actor_normalization
+Dagomba Tribesmen,Loser,unmapped,unknown,1,Adibo1896,add_actor_normalization
+Dagomba Tribesmen,Participant 2,unmapped,unknown,1,Adibo1896,add_actor_normalization
+Dawi Mani Tribesmen,Winner,unmapped,unknown,1,El Moungar1903,add_actor_normalization
+Democratic Republic of Yemen,Loser,unmapped,unknown,1,Aden1994,add_actor_normalization
+Dominican Conservatives,Winner,unmapped,unknown,1,Santo Domingo1965,add_actor_normalization
+Dominican Leftists,Loser,unmapped,unknown,1,Santo Domingo1965,add_actor_normalization
+Duke of Coimbra,Loser,unmapped,unknown,1,Alfarrobeira1986,add_actor_normalization
+Emirate of Bokhara,Loser,unmapped,unknown,1,Bokhara1920,add_actor_normalization
+Emirate of Ilorin,Loser,unmapped,unknown,1,Ilorin1897,add_actor_normalization
+Emirate of Kano,Loser,unmapped,unknown,1,Kano1903,add_actor_normalization
+Emirate of Nupe,Loser,unmapped,unknown,1,Bida1897,add_actor_normalization
+Eritrean Rebels,Loser,unmapped,unknown,1,Massawa1977,add_actor_normalization
+Escobar Rebels,Loser,unmapped,unknown,1,Jimenez1929,add_actor_normalization
+Estonians,Loser,unmapped,unknown,1,Petrograd1919,add_actor_normalization
+Ethiopian Rebels,Winner,unmapped,unknown,1,Addis Ababa1991,add_actor_normalization
+Ethiopian Rebels,Participant 1,unmapped,unknown,1,Addis Ababa1991,add_actor_normalization
+Fengtian,Loser,unmapped,unknown,1,Changxindian1922,add_actor_normalization
+Filipino Rebels,Loser,unmapped,unknown,1,San Juan del Monte1896,add_actor_normalization
+Finnish Anti-Communists,Loser,unmapped,unknown,1,Porvoo1918,add_actor_normalization
+Finnish Communists,Loser,unmapped,unknown,1,Helsinki1918,add_actor_normalization
+Finnish Communists,Winner,unmapped,unknown,1,Porvoo1918,add_actor_normalization
+Finnish Reds,Winner,unmapped,unknown,1,Sigurds1918,add_actor_normalization
+Finnish Reds,Loser,unmapped,unknown,1,Tampere1918,add_actor_normalization
+Finnish Whites,Participant 1,mapped_internal,faction,1,Aland1918,check_internal_mapping
+Finnish Whites,Loser,mapped_internal,faction,1,Sigurds1918,check_internal_mapping
+former       President Terencio Sierra,Loser,unmapped,unknown,1,Nacaome1903,add_actor_normalization
+Free French,Loser,unmapped,unknown,1,Bir Hacheim1942,add_actor_normalization
+Fulani Empire,Loser,unmapped,unknown,1,Burmi1903,add_actor_normalization
+Fulani Sultanate,Loser,unmapped,unknown,1,Sokoto1903,add_actor_normalization
+General Jose Manuel Hernandez,Winner,unmapped,unknown,1,Mata Carmelera1898,add_actor_normalization
+General Vincente Tosta,Participant 2,unmapped,unknown,1,San Pedro Sula1919,add_actor_normalization
+General Yang Zhigong,Loser,unmapped,unknown,1,Luoyang1927,add_actor_normalization
+General Ye Kaixin,Loser,unmapped,unknown,1,Changsha1926,add_actor_normalization
+German volunteers,Loser,unmapped,unknown,1,Riga (2nd)1919,add_actor_normalization
+Greek Communist Rebels,Participant 2,mapped_internal,faction,1,Grammos1948,check_internal_mapping
+Greek Communists,Winner,mapped_internal,faction,1,Naoussa1946,check_internal_mapping
+Greek Government,Participant 1,mapped_internal,faction,1,Grammos1948,check_internal_mapping
+Grenada,Loser,unmapped,unknown,1,Grenada1983,add_actor_normalization
+Guatemala,Winner,unmapped,unknown,1,El Jicaro1906,add_actor_normalization
+Gulbudin Hekmatyar,Loser,unmapped,unknown,1,Kabul1996,add_actor_normalization
+Guo Songling,Loser,unmapped,unknown,1,Xinmintun1925,add_actor_normalization
+Habibullah Kalakani,Loser,unmapped,unknown,1,Kabul1929,add_actor_normalization
+Habibullah Khan,Loser,unmapped,unknown,1,Charasia1929,add_actor_normalization
+Habsburg Royalists,Loser,unmapped,unknown,1,Budapest1921,add_actor_normalization
+Hafizullah Amin,Loser,unmapped,unknown,1,Kabul1979,add_actor_normalization
+Hehe Rebels,Loser,unmapped,unknown,1,Iringa1894,add_actor_normalization
+Hehe Tribe,Winner,unmapped,unknown,1,Lugalo1891,add_actor_normalization
+Herero Rebels,Winner,unmapped,unknown,1,Freyers Farm1904,add_actor_normalization
+Herero Tribes,Loser,unmapped,unknown,1,Onganjira1904,add_actor_normalization
+Hereros,Winner,unmapped,unknown,1,Oviumbo1904,add_actor_normalization
+Hereros,Loser,unmapped,unknown,1,Owikokorero1904,add_actor_normalization
+Honduran Rebels,Loser,unmapped,unknown,1,Choluteca1894,add_actor_normalization
+Ijebu,Loser,unmapped,unknown,1,Yemoji1892,add_actor_normalization
+Ikhwan Brotherhood,Loser,unmapped,unknown,1,Sabalah1929,add_actor_normalization
+Ikhwan Rebels,Loser,unmapped,unknown,1,Umm Urdhumah1929,add_actor_normalization
+Indian protestors,Loser,unmapped,unknown,1,Amritsar1919,add_actor_normalization
+International Brigades,Participant 2,unmapped,unknown,1,"Guadalajara, Spain1937",add_actor_normalization
+International Mercenaries,Winner,unmapped,unknown,1,Stanleyville1964,add_actor_normalization
+Iranian Monarchists,Loser,unmapped,unknown,1,Qom1911,add_actor_normalization
+Iranian Nationalists,Winner,unmapped,unknown,1,Qom1911,add_actor_normalization
+Iraqi Insurgents,Winner,unmapped,unknown,1,Rustumiyah1920,add_actor_normalization
+Iraqi Irregulars,Loser,unmapped,unknown,1,Safad1948,add_actor_normalization
+Irish Rebels,Winner,unmapped,unknown,1,Rineen1920,add_actor_normalization
+Irish Republican Rebels,Loser,unmapped,unknown,1,Beal na mBlath1922,add_actor_normalization
+Isaaq Rebels,Winner,unmapped,unknown,1,Hargeisa1988,add_actor_normalization
+Ishaq Khan,Loser,unmapped,unknown,1,Ghaznigak1888,add_actor_normalization
+Kashmiri Insurgents,Loser,unmapped,unknown,1,Haji Pir1965,add_actor_normalization
+Kashmiri Insurgents,Winner,unmapped,unknown,1,Skardu1948,add_actor_normalization
+Kashmiri Muslim Rebels,Winner,unmapped,unknown,1,Uri1947,add_actor_normalization
+Kashmiri Muslims,Loser,unmapped,unknown,1,Shalateng1947,add_actor_normalization
+Kashmiri Tribesmen,Loser,unmapped,unknown,1,Naushera1948,add_actor_normalization
+Katanga,Loser,unmapped,unknown,1,Elizabethville1961,add_actor_normalization
+Katipunero Rebels,Loser,unmapped,unknown,1,"San Mateo, Philippines1896",add_actor_normalization
+Khmer Rouge,Winner,unmapped,unknown,1,Phnom Penh1975,add_actor_normalization
+Khmer Rouge,Loser,unmapped,unknown,1,Phnom Penh1979,add_actor_normalization
+Kingdom of Benin,Loser,unmapped,unknown,1,Benin1897,add_actor_normalization
+Kosovar Albanian Rebels,Winner,unmapped,unknown,1,Kossovo1999,add_actor_normalization
+Kurdish Rebels,Winner,unmapped,unknown,1,Panjwin1983,add_actor_normalization
+Kuwait,Winner,unmapped,unknown,1,Jahrah1920,add_actor_normalization
+Lao Rebels,Loser,unmapped,unknown,1,Thakhek1946,add_actor_normalization
+Laos,Loser,unmapped,unknown,1,Muong-Khoua1953,add_actor_normalization
+Laotian Anti-Communists,Loser,unmapped,unknown,1,Sala Phou Khoun1975,add_actor_normalization
+Laotian Neutralists,Loser,unmapped,unknown,1,Vientiane1960,add_actor_normalization
+Laotian Rightists,Loser,unmapped,unknown,1,Nam Tha1962,add_actor_normalization
+Laotian Rightists,Winner,unmapped,unknown,1,Vientiane1960,add_actor_normalization
+Lebanese Christian Militia,Winner,unmapped,unknown,1,Zahle1981,add_actor_normalization
+Lebanese Christian Militias,Winner,unmapped,unknown,1,Tel-el-Zataar1976,add_actor_normalization
+Li Jinglin,Loser,unmapped,unknown,1,Tianjin1925,add_actor_normalization
+Liberals,Winner,unmapped,unknown,1,Gatazo1895,add_actor_normalization
+Liberating Revolution' Rebels,Loser,unmapped,unknown,1,La Victoria1902,add_actor_normalization
+Lithuania,Winner,unmapped,unknown,1,Memel1923,add_actor_normalization
+Lithuanian-Byelorussian Rebels,Winner,unmapped,unknown,1,Vilna1920,add_actor_normalization
+Lu Zhonglin,Loser,unmapped,unknown,1,Tianjin1926,add_actor_normalization
+Mahdiyya,Loser,unmapped,unknown,1,Dufile1888,add_actor_normalization
+Mahsud Tribesmen,Loser,unmapped,unknown,1,Ahnai Tangi1920,add_actor_normalization
+Malagasy Rebels,Loser,unmapped,unknown,1,Moramanga1947,add_actor_normalization
+Manchukuo,Winner,unmapped,unknown,1,Harbin1932,add_actor_normalization
+Manchuria,Winner,unmapped,unknown,1,Shanhaiguan1924,add_actor_normalization
+Mandingos,Loser,unmapped,unknown,1,Guelemou1898,add_actor_normalization
+Matabeleland,Winner,unmapped,unknown,1,Shangani Incident1893,add_actor_normalization
+Mau Mau,Winner,unmapped,unknown,1,"Aberdare, Kenya1955(2nd)",add_actor_normalization
+Mau Mau,Participant 1,unmapped,unknown,1,"Aberdare, Kenya1955(2nd)",add_actor_normalization
+Mau Mau Rebels,Participant 2,unmapped,unknown,1,"Aberdare, Kenya1955",add_actor_normalization
+Mau Mau Rebels,Loser,unmapped,unknown,1,Mount Kenya1955,add_actor_normalization
+Mauritania,Winner,unmapped,unknown,1,Nouakchott1976,add_actor_normalization
+Mauritania,Loser,unmapped,unknown,1,Zouerate1977,add_actor_normalization
+Mbumba Rebels,Loser,unmapped,unknown,1,Kolwezi1978,add_actor_normalization
+Mbunga,Loser,unmapped,unknown,1,Mahenge1905,add_actor_normalization
+Mohmand Tribesmen,Loser,unmapped,unknown,1,Shabkadr1897,add_actor_normalization
+Mongolian Nationalists,Winner,unmapped,unknown,1,Kiatkha1921,add_actor_normalization
+Montenegro,Loser,unmapped,unknown,1,Mojkovac1916,add_actor_normalization
+Moroccan Berbers,Loser,unmapped,unknown,1,Timimoun1901,add_actor_normalization
+Moroccan Tribes,Loser,unmapped,unknown,1,Taghit1903,add_actor_normalization
+Moros,Participant 2,mapped_internal,rebel_group,1,Kudarangan1904,check_internal_mapping
+Muhammad Nadir Khan,Winner,unmapped,unknown,1,Kabul1929,add_actor_normalization
+Mullah Muhamad Abdullah Hassan of Somaliland,Loser,unmapped,unknown,1,Baran1920,add_actor_normalization
+Muscat,Winner,unmapped,unknown,1,Rustaq1955,add_actor_normalization
+Nadir Shah,Winner,unmapped,unknown,1,Charasia1929,add_actor_normalization
+Naval mutineers,Loser,unmapped,unknown,1,Kronstadt1921,add_actor_normalization
+North Chadian Rebels,Winner,unmapped,unknown,1,Erdi1986,add_actor_normalization
+Northern Chadian Rebels,Loser,unmapped,unknown,1,Ati1978,add_actor_normalization
+Northern Warlord Sun Zhuanfang,Winner,unmapped,unknown,1,Shanghai1927,add_actor_normalization
+Oman,Loser,unmapped,unknown,1,Rustaq1955,add_actor_normalization
+Orakzai Tribe,Winner,unmapped,unknown,1,Landi Kotal1897,add_actor_normalization
+Orakzai Tribesmen,Winner,unmapped,unknown,1,Saragarhi1897,add_actor_normalization
+Oromo,Winner,unmapped,unknown,1,Lake Ashangi1936,add_actor_normalization
+Oromo Rebels,Winner,unmapped,unknown,1,Asosa1990-1991,add_actor_normalization
+Oulad Djerir Tribesmen,Winner,unmapped,unknown,1,El Moungar1903,add_actor_normalization
+Palestinians,Participant 2,mapped_internal,faction,1,Deir Yassin1948,check_internal_mapping
+Palestinians,Winner,mapped_internal,faction,1,Karama1968,check_internal_mapping
+Panama,Loser,unmapped,unknown,1,Panama1989,add_actor_normalization
+Pancho Villa Rebels,Participant 1,unmapped,unknown,1,"Santa Isabel, Sonora1916",add_actor_normalization
+Paraguayan Government,Winner,unmapped,unknown,1,Asuncion1947,add_actor_normalization
+Paraguayan Rebels,Loser,unmapped,unknown,1,Asuncion1947,add_actor_normalization
+Pathan Tribes,Loser,unmapped,unknown,1,Malakand1897,add_actor_normalization
+Pathet Lao,Loser,unmapped,unknown,1,Luang Prabang1953,add_actor_normalization
+Peru,Loser,unmapped,unknown,1,Gueppi1933,add_actor_normalization
+Philipino Rebels,Loser,unmapped,unknown,1,Santa Cruz1899,add_actor_normalization
+PLO,Loser,unmapped,unknown,1,Beirut1982,add_actor_normalization
+Pogoro,Loser,unmapped,unknown,1,Mahenge1905,add_actor_normalization
+Polisario Rebels,Loser,unmapped,unknown,1,Zag1980,add_actor_normalization
+Polisario Rebels,Winner,unmapped,unknown,1,Zouerate1977,add_actor_normalization
+Polisaro,Loser,unmapped,unknown,1,Nouakchott1976,add_actor_normalization
+Polisaro,Participant 2,unmapped,unknown,1,Smara1976,add_actor_normalization
+Polish Rebels,Loser,unmapped,unknown,1,Warsaw1944,add_actor_normalization
+Polsario,Winner,unmapped,unknown,1,Guelta Zemmour1981,add_actor_normalization
+President Juaqin Crespo,Loser,unmapped,unknown,1,Mata Carmelera1898,add_actor_normalization
+President Mohammad Daoud,Loser,unmapped,unknown,1,Kabul1978,add_actor_normalization
+Presidential claimant       Manuel Bonilla,Winner,unmapped,unknown,1,Nacaome1903,add_actor_normalization
+Presidentialists,Loser,unmapped,unknown,1,San Francisco1891,add_actor_normalization
+Prince Faizal of Hejaz,Loser,unmapped,unknown,1,Maisalun1920,add_actor_normalization
+Pro-Boer Foreign Volunteers,Loser,unmapped,unknown,1,Boshof1900,add_actor_normalization
+Pro-British Zulus,Loser,unmapped,unknown,1,Ivuna1888,add_actor_normalization
+Pro-Pakistan Tribesmen,Loser,unmapped,unknown,1,Poonch1947,add_actor_normalization
+Pro-Spanish Negroes,Winner,unmapped,unknown,1,"Candelaria, Cuba1896",add_actor_normalization
+Provisional Government,Loser,unmapped,unknown,1,Petrograd1917,add_actor_normalization
+Qasim,Loser,unmapped,unknown,1,Mulaydah1891,add_actor_normalization
+Qatar,Winner,unmapped,unknown,1,Khafji1991,add_actor_normalization
+Qing China,Loser,unmapped,unknown,1,Wuchang1911,add_actor_normalization
+Rafael Lopez Gutierrez,Participant 1,unmapped,unknown,1,San Pedro Sula1919,add_actor_normalization
+Rebels under Gabriele D'Annunzio,Loser,unmapped,unknown,1,Fiume1919,add_actor_normalization
+Republic of Korea,Winner,unmapped,unknown,1,"Bloody Ridge, Korea1951",add_actor_normalization
+Republican China,Winner,unmapped,unknown,1,Beijing1917,add_actor_normalization
+Republican Rebels,Winner,unmapped,unknown,1,Wuchang1911,add_actor_normalization
+Republicans,Loser,mapped_internal,faction,1,Santander1937,check_internal_mapping
+Republika Serbska,Loser,unmapped,unknown,1,Bihac1992,add_actor_normalization
+Republika Serbska,Winner,unmapped,unknown,1,Srebrenica1993,add_actor_normalization
+Republika Srpska,Loser,unmapped,unknown,1,Operation Deliberate Force1995,add_actor_normalization
+Rhodesia,Winner,unmapped,unknown,1,Elands River Post1900,add_actor_normalization
+Rhodesia,Loser,unmapped,unknown,1,Krugersdorp1896,add_actor_normalization
+Rif Rebels,Loser,unmapped,unknown,1,Alhucemas1925,add_actor_normalization
+Rif Rebels,Winner,unmapped,unknown,1,Anual1921,add_actor_normalization
+Riffian Rebels,Winner,unmapped,unknown,1,Tizzi Azza1922,add_actor_normalization
+Riffian Rebels,Loser,unmapped,unknown,1,Tizzi Azza1923,add_actor_normalization
+Rifs,Winner,unmapped,unknown,1,Chaouen1924,add_actor_normalization
+Russian Bolsheviks,Participant 2,unmapped,unknown,1,Aland1918,add_actor_normalization
+Russian Bolsheviks,Winner,unmapped,unknown,1,Tobol1919,add_actor_normalization
+Russsia,Winner,unmapped,unknown,1,Gorodok1914,add_actor_normalization
+Saharan Rebels,Loser,unmapped,unknown,1,Amgala1976,add_actor_normalization
+Salleh bin Sambas,Loser,unmapped,unknown,1,Limbang1962,add_actor_normalization
+Senussi Bedouin,Loser,unmapped,unknown,1,Siwa1917,add_actor_normalization
+Sikasso,Loser,unmapped,unknown,1,Sikasso1898,add_actor_normalization
+Sioux Indians,Participant 2,unmapped,unknown,1,Wounded Knee Creek1890,add_actor_normalization
+Sokoto Caliphate,Loser,unmapped,unknown,1,Rawiya1903,add_actor_normalization
+Somali Islamists,Winner,mapped_internal,rebel_group,1,Gumburu1903,check_internal_mapping
+Somali militia,Winner,unmapped,unknown,1,Jidballi1904,add_actor_normalization
+Somali Rebels,Loser,unmapped,unknown,1,Dul Madoba1913,add_actor_normalization
+Somali Rebels,Winner,unmapped,unknown,1,Mogadishu1993,add_actor_normalization
+Somaliland Mullah,Loser,unmapped,unknown,1,Daratoleh1903,add_actor_normalization
+Soviet Union,Winner,unmapped,unknown,1,Manchuria1945,add_actor_normalization
+Spanish Nationalists,Participant 1,mapped_internal,faction,1,"Guadalajara, Spain1937",check_internal_mapping
+Spanish Republicans,Participant 2,mapped_internal,faction,1,"Guadalajara, Spain1937",check_internal_mapping
+Sudanese forces,Winner,unmapped,unknown,1,Handoub1888,add_actor_normalization
+Sudanese Islamists,Loser,unmapped,unknown,1,Omdurman1898,add_actor_normalization
+Sudanese Rebels,Loser,unmapped,unknown,1,Beringia1916,add_actor_normalization
+Sultanate of Darfur,Loser,unmapped,unknown,1,Guiba1916,add_actor_normalization
+Sun Chuanfung of Jiangxi,Loser,unmapped,unknown,1,Fuzhou1926,add_actor_normalization
+Sun Zhuanfang,Loser,unmapped,unknown,1,Xuzhou1927,add_actor_normalization
+Syrian Legion dissidents,Loser,unmapped,unknown,1,Hama1925,add_actor_normalization
+Taliban,Winner,mapped_internal,rebel_group,1,Kabul1996,check_internal_mapping
+Taureg,Loser,unmapped,unknown,1,Tit1902,add_actor_normalization
+the Mahdiyya,Participant 2,unmapped,unknown,1,Abu Hamed1897,add_actor_normalization
+the Mahdiyya,Loser,unmapped,unknown,1,Handoub1888,add_actor_normalization
+The Mahdiyya,Loser,unmapped,unknown,1,Gedaref1898,add_actor_normalization
+The Ottoman Empire,Participant 2,unmapped,unknown,1,Katia (1st)1916,add_actor_normalization
+Tigrayan Rebels,Winner,unmapped,unknown,1,Inda Silase1989,add_actor_normalization
+Tukulor Empire,Loser,unmapped,unknown,1,Nioro1891,add_actor_normalization
+Ukrainian Secessionists,Loser,unmapped,unknown,1,Rostov1918,add_actor_normalization
+Ukranian Anarchists,Loser,unmapped,unknown,1,Peregonovka1919,add_actor_normalization
+Venezuela,Participant 2,unmapped,unknown,1,La Guaira1902,add_actor_normalization
+Venezuelan Government,Winner,unmapped,unknown,1,Ciudad Bolivar1903,add_actor_normalization
+Venezuelan Leftists,Loser,unmapped,unknown,1,Puerto Cabello1962,add_actor_normalization
+Venezuelan Liberal Rebels,Winner,unmapped,unknown,1,Tocuyito1899,add_actor_normalization
+Venezuelan Rebels,Loser,unmapped,unknown,1,Ciudad Bolivar1903,add_actor_normalization
+Venezuelan Rebels,Winner,unmapped,unknown,1,"San Pedro, Venezuela1892",add_actor_normalization
+Viet Cong,Participant 2,mapped_internal,rebel_group,1,Khe Sanh1968,check_internal_mapping
+Vietcong,Winner,unmapped,unknown,1,Cambodia1970,add_actor_normalization
+Vietminh,Participant 2,unmapped,unknown,1,Yen Bai1952,add_actor_normalization
+Vietnamese Civilians,Participant 2,unmapped,unknown,1,My Lai1968,add_actor_normalization
+Warlord Chiang Xueliang,Loser,unmapped,unknown,1,Linying1927,add_actor_normalization
+Warlord Sun Zuanfang,Loser,unmapped,unknown,1,"Longtan, China1927",add_actor_normalization
+Warlord Zhang Xun,Loser,unmapped,unknown,1,Beijing1917,add_actor_normalization
+Warlord Zhang Zuolin,Loser,unmapped,unknown,1,Beijing1928,add_actor_normalization
+Waziri Rebels,Loser,unmapped,unknown,1,Barari Tangi1920,add_actor_normalization
+Waziri Rebels,Winner,unmapped,unknown,1,Palosina1919,add_actor_normalization
+Waziri Tribesmen,Loser,unmapped,unknown,1,Aka Khel1920,add_actor_normalization
+Yan Xishan,Loser,unmapped,unknown,1,Taiyuan1949,add_actor_normalization
+Yemen,Winner,unmapped,unknown,1,Aden1994,add_actor_normalization
+Yemen,Loser,unmapped,unknown,1,Hudayda1934,add_actor_normalization
+Yemen Government,Participant 1,unmapped,unknown,1,Aden1986,add_actor_normalization
+Yemen Rebels,Participant 2,unmapped,unknown,1,Aden1986,add_actor_normalization
+Zaia,Loser,unmapped,unknown,1,Khenifra1914,add_actor_normalization
+Zapatistas,Winner,mapped_internal,rebel_group,1,Cuautla1911,check_internal_mapping
+Zhang Zongchang,Loser,unmapped,unknown,1,Nanjing1927,add_actor_normalization
+Zhang Zuolin,Loser,unmapped,unknown,1,Baoding1928,add_actor_normalization
+Zhili,Loser,unmapped,unknown,1,Shanhaiguan1924,add_actor_normalization
+Zionists,Winner,unmapped,unknown,1,Jaffa1949,add_actor_normalization
+Zulu Rebels,Winner,mapped_internal,rebel_group,1,Ivuna1888,check_internal_mapping
+Zulus,Winner,unmapped,unknown,1,Ceza1888,add_actor_normalization

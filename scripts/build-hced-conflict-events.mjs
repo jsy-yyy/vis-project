@@ -8,7 +8,9 @@ const rootDir = resolve(__dirname, "..");
 const sourceUrl = "https://dataverse.harvard.edu/api/access/datafile/13390255";
 const sourcePath = process.env.HCED_SOURCE ?? "/private/tmp/hced-data-v3.csv";
 const outputPath = resolve(rootDir, "public/data/hced/conflict_events.csv");
+const actorAuditPath = resolve(rootDir, "public/data/hced/actor_audit.csv");
 const participantNormalizationPath = resolve(rootDir, "scripts/participant-normalization.csv");
+const actorNormalizationPath = resolve(rootDir, "scripts/actor-normalization.csv");
 
 const minYear = 1886;
 const maxYear = 2003;
@@ -23,6 +25,7 @@ const outputHeaders = [
   "longitude",
   "participants",
   "raw_participants",
+  "actors",
   "winner",
   "loser",
   "participant_1",
@@ -33,6 +36,20 @@ const outputHeaders = [
   "narrative",
   "source",
 ];
+
+const actorAuditHeaders = ["raw_name", "source_field", "status", "type", "count", "examples", "suggested_action"];
+
+const actorRoles = new Set(["participant", "winner", "loser", "unknown"]);
+const actorTypes = new Set([
+  "country",
+  "empire",
+  "alliance",
+  "faction",
+  "rebel_group",
+  "civilian_group",
+  "unknown",
+]);
+const actorConfidences = new Set(["high", "medium", "low"]);
 
 function parseCsv(text) {
   const rows = [];
@@ -111,6 +128,26 @@ function normalizeList(value) {
 
 function normalizeLookupKey(value) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeActorKey(value) {
+  return value
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function slugify(value) {
+  const slug = value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug || "unknown";
 }
 
 function compact(values) {
@@ -202,7 +239,9 @@ function readParticipantNormalization() {
       }
 
       mapping.set(lookupKey, canonicalName);
+      mapping.set(normalizeLookupKey(canonicalName), canonicalName);
       ignored.delete(lookupKey);
+      ignored.delete(normalizeLookupKey(canonicalName));
       continue;
     }
 
@@ -216,6 +255,306 @@ function readParticipantNormalization() {
   }
 
   return { mapping, ignored };
+}
+
+function parseBoolean(value, fallback = false) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+
+  if (!normalized) {
+    return fallback;
+  }
+
+  return ["1", "true", "yes", "y"].includes(normalized);
+}
+
+function readActorNormalization() {
+  const rows = parseCsv(readFileSync(actorNormalizationPath, "utf8"));
+  const mapping = new Map();
+
+  for (const row of rows) {
+    const rawName = row.raw_name?.trim();
+    const action = row.action?.trim().toLowerCase();
+
+    if (!rawName) {
+      continue;
+    }
+
+    if (!["map_country", "map_faction", "ignore", "ambiguous"].includes(action)) {
+      throw new Error(`Invalid actor normalization action for "${rawName}": ${row.action}`);
+    }
+
+    const type = row.type?.trim() || (action === "map_country" ? "country" : action === "map_faction" ? "faction" : "unknown");
+    const confidence = row.confidence?.trim() || (action === "map_country" ? "high" : "low");
+
+    if (!actorTypes.has(type)) {
+      throw new Error(`Invalid actor type for "${rawName}": ${row.type}`);
+    }
+
+    if (!actorConfidences.has(confidence)) {
+      throw new Error(`Invalid actor confidence for "${rawName}": ${row.confidence}`);
+    }
+
+    mapping.set(normalizeActorKey(rawName), {
+      action,
+      canonicalName: row.canonical_name?.trim() || rawName,
+      type,
+      confidence,
+      mapTarget: row.map_target?.trim() || "",
+      networkEligible: parseBoolean(row.network_eligible, action === "map_country"),
+      note: row.note?.trim() || "",
+    });
+  }
+
+  return mapping;
+}
+
+function createActor({
+  rawName,
+  name,
+  role,
+  type,
+  confidence,
+  mapTarget = "",
+  networkEligible = false,
+  sourceField,
+  status,
+}) {
+  if (!actorRoles.has(role)) {
+    throw new Error(`Invalid actor role: ${role}`);
+  }
+
+  if (!actorTypes.has(type)) {
+    throw new Error(`Invalid actor type for "${rawName}": ${type}`);
+  }
+
+  if (!actorConfidences.has(confidence)) {
+    throw new Error(`Invalid actor confidence for "${rawName}": ${confidence}`);
+  }
+
+  return {
+    id: slugify(name),
+    rawName,
+    name,
+    role,
+    type,
+    confidence,
+    mapTarget,
+    networkEligible,
+    sourceField,
+    status,
+  };
+}
+
+function dedupeActors(actors) {
+  const deduped = [];
+  const seen = new Set();
+
+  for (const actor of actors) {
+    const key = [actor.role, actor.sourceField, actor.rawName, actor.name, actor.mapTarget].join("::");
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    deduped.push(actor);
+    seen.add(key);
+  }
+
+  return deduped;
+}
+
+function resolveMappedActor(rawName, role, sourceField, contextCountry, participantNormalization, actorNormalization) {
+  const actorKey = normalizeActorKey(rawName);
+  const explicit = actorNormalization.get(actorKey);
+
+  if (explicit) {
+    if (explicit.action === "ignore") {
+      return null;
+    }
+
+    if (explicit.action === "ambiguous") {
+      return createActor({
+        rawName,
+        name: explicit.canonicalName || rawName,
+        role,
+        type: explicit.type,
+        confidence: explicit.confidence,
+        sourceField,
+        status: "ambiguous",
+      });
+    }
+
+    const mapTarget = explicit.mapTarget === "event_country" ? contextCountry : explicit.mapTarget || explicit.canonicalName;
+
+    return createActor({
+      rawName,
+      name: explicit.canonicalName,
+      role,
+      type: explicit.type,
+      confidence: explicit.confidence,
+      mapTarget,
+      networkEligible: explicit.networkEligible,
+      sourceField,
+      status: explicit.action === "map_faction" ? "mapped_internal" : "mapped",
+    });
+  }
+
+  const participantAlias = participantNormalization.mapping.get(normalizeLookupKey(rawName));
+
+  if (participantAlias && !participantNormalization.ignored.has(normalizeLookupKey(rawName))) {
+    return createActor({
+      rawName,
+      name: participantAlias,
+      role,
+      type: "country",
+      confidence: role === "participant" ? "high" : "medium",
+      mapTarget: participantAlias,
+      networkEligible: true,
+      sourceField,
+      status: "mapped",
+    });
+  }
+
+  return createActor({
+    rawName,
+    name: rawName,
+    role,
+    type: "unknown",
+    confidence: "low",
+    sourceField,
+    status: "unmapped",
+  });
+}
+
+function getParticipantActors(rawParticipants, participantNormalization) {
+  const actors = [];
+
+  for (const rawParticipant of rawParticipants.split(/[;,]/).map((item) => item.trim()).filter(Boolean)) {
+    const lookupKey = normalizeLookupKey(rawParticipant);
+    const canonicalName = participantNormalization.mapping.get(lookupKey);
+
+    if (!canonicalName || participantNormalization.ignored.has(lookupKey)) {
+      continue;
+    }
+
+    actors.push(createActor({
+      rawName: rawParticipant,
+      name: canonicalName,
+      role: "participant",
+      type: "country",
+      confidence: "high",
+      mapTarget: canonicalName,
+      networkEligible: true,
+      sourceField: "Participants",
+      status: "mapped",
+    }));
+  }
+
+  return actors;
+}
+
+function getFieldActors(value, role, sourceField, contextCountry, participantNormalization, actorNormalization) {
+  return parseList(value)
+    .map((rawName) =>
+      resolveMappedActor(rawName, role, sourceField, contextCountry, participantNormalization, actorNormalization),
+    )
+    .filter(Boolean);
+}
+
+function getActors(row, rawParticipants, participantNormalization, actorNormalization) {
+  return dedupeActors([
+    ...getParticipantActors(rawParticipants, participantNormalization),
+    ...getFieldActors(row.Winner, "winner", "Winner", row.Country || "", participantNormalization, actorNormalization),
+    ...getFieldActors(row.Loser, "loser", "Loser", row.Country || "", participantNormalization, actorNormalization),
+    ...getFieldActors(row["Participant 1"], "participant", "Participant 1", row.Country || "", participantNormalization, actorNormalization),
+    ...getFieldActors(row["Participant 2"], "participant", "Participant 2", row.Country || "", participantNormalization, actorNormalization),
+  ]);
+}
+
+function getParticipantsFromActors(actors) {
+  const participants = [];
+  const seen = new Set();
+
+  for (const actor of actors) {
+    if (!actor.networkEligible || !["high", "medium"].includes(actor.confidence)) {
+      continue;
+    }
+
+    if (actor.type !== "country" && actor.type !== "empire" && actor.type !== "alliance") {
+      continue;
+    }
+
+    const canonicalKey = normalizeLookupKey(actor.name);
+
+    if (seen.has(canonicalKey)) {
+      continue;
+    }
+
+    participants.push(actor.name);
+    seen.add(canonicalKey);
+  }
+
+  return participants.join("; ");
+}
+
+function addActorAudit(audit, actors, eventId) {
+  for (const actor of actors) {
+    if (actor.status === "mapped" && actor.confidence !== "low") {
+      continue;
+    }
+
+    const key = [actor.rawName, actor.sourceField, actor.status, actor.type].join("::");
+    const entry = audit.get(key) ?? {
+      rawName: actor.rawName,
+      sourceField: actor.sourceField,
+      status: actor.status,
+      type: actor.type,
+      count: 0,
+      examples: [],
+    };
+
+    entry.count += 1;
+    if (entry.examples.length < 5) {
+      entry.examples.push(eventId);
+    }
+
+    audit.set(key, entry);
+  }
+}
+
+function getSuggestedAction(entry) {
+  if (entry.status === "ambiguous") {
+    return "review_ambiguous";
+  }
+
+  if (entry.type === "faction" || entry.type === "rebel_group") {
+    return "check_internal_mapping";
+  }
+
+  return "add_actor_normalization";
+}
+
+function writeActorAudit(audit) {
+  const rows = Array.from(audit.values()).sort((a, b) => b.count - a.count || a.rawName.localeCompare(b.rawName));
+
+  writeFileSync(
+    actorAuditPath,
+    `${actorAuditHeaders.join(",")}\n${rows
+      .map((row) =>
+        [
+          row.rawName,
+          row.sourceField,
+          row.status,
+          row.type,
+          row.count,
+          row.examples.join("; "),
+          getSuggestedAction(row),
+        ]
+          .map(csvEscape)
+          .join(","),
+      )
+      .join("\n")}\n`,
+  );
 }
 
 function getCleanParticipants(rawParticipants, normalization) {
@@ -246,6 +585,8 @@ function getCleanParticipants(rawParticipants, normalization) {
 ensureSourceDownloaded();
 
 const participantNormalization = readParticipantNormalization();
+const actorNormalization = readActorNormalization();
+const actorAudit = new Map();
 const rawRows = parseCsv(readFileSync(sourcePath, "utf8"));
 const rows = rawRows
   .filter((row) => {
@@ -264,6 +605,8 @@ const rows = rawRows
   })
   .map((row) => {
     const rawParticipants = normalizeList(row.Participants);
+    const actors = getActors(row, rawParticipants, participantNormalization, actorNormalization);
+    addActorAudit(actorAudit, actors, row.ID);
 
     return {
       event_id: row.ID,
@@ -273,8 +616,9 @@ const rows = rawRows
       location_name: getLocationName(row),
       latitude: String(Number(row.Latitude)),
       longitude: String(Number(row.Longitude)),
-      participants: getCleanParticipants(rawParticipants, participantNormalization),
+      participants: getParticipantsFromActors(actors) || getCleanParticipants(rawParticipants, participantNormalization),
       raw_participants: rawParticipants,
+      actors: JSON.stringify(actors),
       winner: row.Winner || "",
       loser: row.Loser || "",
       participant_1: row["Participant 1"] || "",
@@ -296,5 +640,7 @@ writeFileSync(
     .map((row) => outputHeaders.map((header) => csvEscape(row[header])).join(","))
     .join("\n")}\n`,
 );
+writeActorAudit(actorAudit);
 
 console.log(`Wrote ${rows.length} HCED conflict events to ${outputPath}`);
+console.log(`Wrote actor audit to ${actorAuditPath}`);

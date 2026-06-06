@@ -1,0 +1,123 @@
+raw_name,action,canonical_name,type,confidence,map_target,network_eligible,note
+Draw,ignore,,unknown,low,,false,Outcome marker rather than actor
+Unknown,ignore,,unknown,low,,false,No resolvable actor
+Massacre,ignore,,unknown,low,,false,Event type rather than actor
+Bolsheviks,map_faction,Bolsheviks,faction,medium,Russia,false,Russian Civil War internal actor
+Russian Whites,map_faction,Russian Whites,faction,medium,Russia,false,Russian Civil War internal actor
+White Russians,map_faction,Russian Whites,faction,medium,Russia,false,Russian Civil War internal actor
+Red Army,map_faction,Red Army,faction,medium,Russia,false,Russian/Soviet internal or state force label
+White Army,map_faction,White Army,faction,medium,Russia,false,Russian Civil War internal actor
+Chinese Communists,map_faction,Chinese Communists,faction,medium,China,false,Chinese Civil War internal actor
+Chinese Nationalists,map_faction,Chinese Nationalists,faction,medium,China,false,Chinese Civil War internal actor
+Kuomintang,map_faction,Kuomintang,faction,medium,China,false,Chinese Nationalist faction
+National Revolutionary Army,map_faction,Chinese Nationalists,faction,medium,China,false,Chinese Nationalist state/faction label
+Spanish Nationalists,map_faction,Spanish Nationalists,faction,medium,Spain,false,Spanish Civil War internal actor
+Spanish Republicans,map_faction,Spanish Republicans,faction,medium,Spain,false,Spanish Civil War internal actor
+Republicans,map_faction,Republicans,faction,low,event_country,false,Generic internal faction label
+Nationalists,map_faction,Nationalists,faction,low,event_country,false,Generic internal faction label
+Communists,map_faction,Communists,faction,low,event_country,false,Generic internal faction label
+Rebels,map_faction,Rebels,rebel_group,low,event_country,false,Generic internal rebel label
+Rebel,map_faction,Rebels,rebel_group,low,event_country,false,Generic internal rebel label
+Insurgents,map_faction,Insurgents,rebel_group,low,event_country,false,Generic internal rebel label
+Guerrillas,map_faction,Guerrillas,rebel_group,low,event_country,false,Generic internal rebel label
+Government,map_faction,Government forces,faction,low,event_country,false,Internal government force label
+Government forces,map_faction,Government forces,faction,low,event_country,false,Internal government force label
+Federal forces,map_faction,Federal forces,faction,low,event_country,false,Internal government force label
+Constitutionalist Rebels,map_faction,Constitutionalist Rebels,rebel_group,medium,Mexico,false,Mexican Revolution internal actor
+Huerta Regime,map_faction,Huerta Regime,faction,medium,Mexico,false,Mexican Revolution internal actor
+Carrancistas,map_faction,Carrancistas,faction,medium,Mexico,false,Mexican Revolution internal actor
+Zapatistas,map_faction,Zapatistas,rebel_group,medium,Mexico,false,Mexican Revolution internal actor
+Villistas,map_faction,Villistas,rebel_group,medium,Mexico,false,Mexican Revolution internal actor
+Cuban Rebels,map_faction,Cuban Rebels,rebel_group,medium,Cuba,false,Cuban internal actor
+Viet Cong,map_faction,Viet Cong,rebel_group,medium,Vietnam,false,Vietnam War internal actor
+Viet Minh,map_faction,Viet Minh,faction,medium,Vietnam,false,Vietnamese independence/internal actor
+Taliban,map_faction,Taliban,rebel_group,medium,Afghanistan,false,Afghanistan internal actor
+Mujahideen,map_faction,Mujahideen,rebel_group,medium,Afghanistan,false,Afghanistan internal actor
+Northern Alliance,map_faction,Northern Alliance,faction,medium,Afghanistan,false,Afghanistan internal actor
+al Qaeda,map_faction,al Qaeda,rebel_group,medium,Afghanistan,false,Afghanistan conflict actor
+FLN,map_faction,FLN,rebel_group,medium,Algeria,false,Algerian independence actor
+Algerian Rebels,map_faction,Algerian Rebels,rebel_group,medium,Algeria,false,Algerian internal actor
+Irish Republicans,map_faction,Irish Republicans,faction,medium,Ireland,false,Irish internal actor
+IRA,map_faction,Irish Republicans,faction,medium,Ireland,false,Irish internal actor
+Somali Islamists,map_faction,Somali Islamists,rebel_group,medium,Somalia,false,Somalia internal actor
+Sudanese Mahdists,map_faction,Sudanese Mahdists,faction,medium,Sudan,false,Sudan internal actor
+Greek Communists,map_faction,Greek Communists,faction,medium,Greece,false,Greek Civil War internal actor
+Greek Communist Rebels,map_faction,Greek Communists,faction,medium,Greece,false,Greek Civil War internal actor
+Greek Government,map_faction,Greek Government,faction,medium,Greece,false,Greek Civil War internal actor
+Zulu Rebels,map_faction,Zulu Rebels,rebel_group,medium,South Africa,false,South Africa internal actor
+Arab Rebels,map_faction,Arab Rebels,rebel_group,low,event_country,false,Generic Arab rebel label
+Biafran Rebels,map_faction,Biafran Rebels,rebel_group,medium,Nigeria,false,Nigerian Civil War internal actor
+Wu Beifu,map_faction,Wu Beifu faction,faction,medium,China,false,Chinese warlord faction
+Iraqi Rebels,map_faction,Iraqi Rebels,rebel_group,medium,Iraq,false,Iraq internal actor
+Moros,map_faction,Moros,rebel_group,medium,Philippines,false,Philippines internal actor
+Philippine Rebels,map_faction,Philippine Rebels,rebel_group,medium,Philippines,false,Philippines internal actor
+Rashidis,map_faction,Rashidis,faction,medium,Saudi Arabia,false,Arabian internal actor
+Chadian Rebels,map_faction,Chadian Rebels,rebel_group,medium,Chad,false,Chad internal actor
+Chadian Government,map_faction,Chadian Government,faction,medium,Chad,false,Chad internal actor
+Mexican Rebels,map_faction,Mexican Rebels,rebel_group,medium,Mexico,false,Mexico internal actor
+Mexican Government,map_faction,Mexican Government,faction,medium,Mexico,false,Mexico internal actor
+Constitutionalists,map_faction,Constitutionalists,faction,medium,Mexico,false,Mexican Revolution internal actor
+Palestinians,map_faction,Palestinians,faction,medium,Palestine,false,Palestinian actor
+Palestinian Arabs,map_faction,Palestinian Arabs,faction,medium,Palestine,false,Palestinian actor
+Arab Legion,map_country,Arab Legion,alliance,medium,Jordan,true,Jordanian Arab Legion represented by Jordan
+Boxers,map_faction,Boxers,rebel_group,medium,China,false,Boxer Rebellion internal actor
+Druze Rebels,map_faction,Druze Rebels,rebel_group,medium,Syria,false,Syria internal actor
+Finnish Whites,map_faction,Finnish Whites,faction,medium,Finland,false,Finnish Civil War internal actor
+Free France,map_country,Free France,country,medium,France,true,Wartime French actor represented by France boundary
+Hashemites,map_faction,Hashemites,faction,medium,Saudi Arabia,false,Arabian internal actor
+Indonesian Rebels,map_faction,Indonesian Rebels,rebel_group,medium,Indonesia,false,Indonesia internal actor
+Nama Tribe,map_faction,Nama Tribe,faction,medium,Namibia,false,Namibia internal actor
+Chilean Presidentialists,map_faction,Chilean Presidentialists,faction,medium,Chile,false,Chile internal actor
+Ottoman Empire,map_country,Ottoman Empire,empire,high,Turkey (Ottoman Empire),true,Historical empire
+Turkey (Ottoman Empire),map_country,Ottoman Empire,empire,high,Turkey (Ottoman Empire),true,CShapes historical name
+Transvaal,map_country,Transvaal,country,high,Transvaal,true,Historical state
+Orange Free State,map_country,Orange Free State,country,high,Orange Free State,true,Historical state
+Vichy France,map_country,Vichy France,country,medium,France,true,Wartime state represented by France boundary
+Canada,map_country,Canada,country,high,Canada,true,Country
+New Zealand,map_country,New Zealand,country,high,New Zealand,true,Country
+Bolivia,map_country,Bolivia,country,high,Bolivia,true,Country
+Paraguay,map_country,Paraguay,country,high,Paraguay,true,Country
+Portugal,map_country,Portugal,country,high,Portugal,true,Country
+Tibet,map_country,Tibet,country,high,Tibet,true,Historical state
+Argentina,map_country,Argentina,country,high,Argentina,true,Country
+Chad,map_country,Chad,country,high,Chad,true,Country
+Nigeria,map_country,Nigeria,country,high,Nigeria,true,Country
+Honduras,map_country,Honduras,country,high,Honduras,true,Country
+Nicaragua,map_country,Nicaragua,country,high,Nicaragua,true,Country
+Austria,map_country,Austria,country,high,Austria,true,Country
+Hungary,map_country,Hungary,country,high,Hungary,true,Country
+Estonia,map_country,Estonia,country,high,Estonia,true,Country
+Madagascar,map_country,Madagascar,country,high,Madagascar (Malagasy),true,CShapes historical name
+Finland,map_country,Finland,country,high,Finland,true,Country
+Philippines,map_country,Philippines,country,high,Philippines,true,Country
+Indonesia,map_country,Indonesia,country,high,Indonesia,true,Country
+Namibia,map_country,Namibia,country,high,Namibia,true,Country
+Chile,map_country,Chile,country,high,Chile,true,Country
+North Vietnam,map_country,North Vietnam,country,high,"Vietnam, Democratic Republic of",true,Historical state
+South Vietnam,map_country,South Vietnam,country,high,"Vietnam, Republic of",true,Historical state
+North Korea,map_country,North Korea,country,high,"Korea, People's Republic of",true,Historical state
+South Korea,map_country,South Korea,country,high,"Korea, Republic of",true,Historical state
+Irish Free State,map_country,Ireland,country,high,Ireland,true,Historical state label
+Saudis,map_country,Saudi Arabia,country,high,Saudi Arabia,true,Demonym
+Saudi,map_country,Saudi Arabia,country,high,Saudi Arabia,true,Demonym
+Saudi Arabia,map_country,Saudi Arabia,country,high,Saudi Arabia,true,Country
+Romania,map_country,Rumania,country,high,Rumania,true,CShapes historical spelling
+Croatia,map_country,Croatia,country,high,Croatia,true,Country
+Dahomey,map_country,Benin,country,medium,Benin,true,Historical state now represented as Benin in snapshots
+Eritrea,map_country,Eritrea,country,high,Eritrea,true,Country
+Vietnam,map_country,Vietnam,country,high,Vietnam,true,Country context
+Korea,map_country,Korea,country,high,Korea,true,Country context
+Yugoslavia,map_country,Yugoslavia,country,high,Yugoslavia,true,Country
+Czechoslovakia,map_country,Czechoslovakia,country,high,Czechoslovakia,true,Country
+Bosnia,map_country,Bosnia,country,high,Bosnia,true,Country
+Bosnia-Herzegovina,map_country,Bosnia-Herzegovina,country,high,Bosnia-Herzegovina,true,Country
+Herzegovina,map_country,Herzegovina,country,high,Herzegovina,true,Country
+Palestine,map_country,Palestine,country,medium,Palestine,true,Historical/territorial actor
+Libya,map_country,Libya,country,high,Libya,true,Country
+Syria,map_country,Syria,country,high,Syria,true,Country
+Jordan,map_country,Jordan,country,high,Jordan,true,Country
+Lebanon,map_country,Lebanon,country,high,Lebanon,true,Country
+Algeria,map_country,Algeria,country,high,Algeria,true,Country
+Somalia,map_country,Somalia,country,high,Somalia,true,Country
+Sudan,map_country,Sudan,country,high,Sudan,true,Country
+South Africa,map_country,South Africa,country,high,South Africa,true,Country

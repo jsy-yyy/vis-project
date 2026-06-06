@@ -110,8 +110,9 @@ CShapes 第一版按十年生成 `1890, 1900, ..., 2000`，并额外加入 `1914
 - `location_name`
 - `latitude`
 - `longitude`
-- `participants`（由 `Participants` 高频人工映射清洗后的参战方，用于筛选、统计和网络图）
+- `participants`（由高/中置信且允许进入网络的 country actors 生成，用于筛选、统计和网络图）
 - `raw_participants`（HCED 原始 `Participants` 规范化后的关键词，用于溯源）
+- `actors`（综合 `Participants`、`Winner`、`Loser`、`Participant 1/2` 清洗出的 actor JSON）
 - `winner`
 - `loser`
 - `participant_1`
@@ -143,6 +144,7 @@ useBattleData(): {
 - `latitude` / `longitude` = HCED coordinates
 - `locationName` = `location_name`
 - `participants` = `participants` parsed to IDs
+- `actors` = `actors` parsed to actor objects
 - `rawParticipantNames` = `raw_participants` parsed to names
 - `winnerNames` = `winner` parsed to names
 - `loserNames` = `loser` parsed to names
@@ -150,6 +152,21 @@ useBattleData(): {
 - `type` = `event_type`
 - `description` = `narrative`
 - `source` = `source`
+
+Actor 清洗由两张人工表驱动：
+
+- `scripts/participant-normalization.csv`：主要清洗原始 `Participants` 中可确认的国家/历史实体。
+- `scripts/actor-normalization.csv`：补充 winner/loser、派系、叛军、ignore 和 ambiguous 规则。
+
+每次运行 `npm run build:hced` 会额外生成：
+
+- `public/data/hced/actor_audit.csv`：仍未映射或需要复核的 actor token、出现次数和示例事件。
+
+地图边界着色规则：
+
+- 国家间胜败只使用可解析为国家/帝国/联盟的 winner/loser actors。
+- 内战、叛军、派系 actor 不染成 winner/loser，而是投影到 `map_target` 或事件 `country`，用 internal conflict 样式高亮。
+- `country` 只作为地点上下文和内战投影 fallback，不直接进入网络图。
 
 早期 `src/data/mockData.ts` 仅保留为开发参考，前端默认不再使用。
 
