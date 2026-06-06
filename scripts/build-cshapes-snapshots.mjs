@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, "..");
 const sourceUrl = "https://icr.ethz.ch/data/cshapes/CShapes-2.0.geojson";
-const sourcePath = process.env.CSHAPES_SOURCE ?? "/private/tmp/cshapes-2.0.geojson";
+const defaultSourcePath =
+  process.platform === "darwin" ? "/private/tmp/cshapes-2.0.geojson" : resolve(rootDir, ".cache/cshapes-2.0.geojson");
+const sourcePath = process.env.CSHAPES_SOURCE ?? defaultSourcePath;
 const outputPath = resolve(rootDir, "public/data/cshapes/cshapes_1886_2003_snapshots.geojson");
 
 const snapshots = [
@@ -79,6 +81,7 @@ function ensureSourceDownloaded() {
     return;
   }
 
+  mkdirSync(dirname(sourcePath), { recursive: true });
   execFileSync("curl", ["-L", sourceUrl, "-o", sourcePath], { stdio: "inherit" });
 }
 

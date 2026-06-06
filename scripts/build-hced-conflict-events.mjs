@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, "..");
 const sourceUrl = "https://dataverse.harvard.edu/api/access/datafile/13390255";
-const sourcePath = process.env.HCED_SOURCE ?? "/private/tmp/hced-data-v3.csv";
+const defaultSourcePath =
+  process.platform === "darwin" ? "/private/tmp/hced-data-v3.csv" : resolve(rootDir, ".cache/hced-data-v3.csv");
+const sourcePath = process.env.HCED_SOURCE ?? defaultSourcePath;
 const outputPath = resolve(rootDir, "public/data/hced/conflict_events.csv");
 const participantNormalizationPath = resolve(rootDir, "scripts/participant-normalization.csv");
 
@@ -113,6 +115,92 @@ function normalizeLookupKey(value) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+function normalizeWarLookupKey(value) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const warNameMappings = new Map([
+  ["world war one", "World War I"],
+  ["first world war", "World War I"],
+  ["great war", "World War I"],
+  ["world war i eastern front", "World War I"],
+  ["world war i war at sea", "World War I"],
+  ["world war two", "World War II"],
+  ["second world war", "World War II"],
+  ["world war ii war at sea", "World War II"],
+  ["world war ii world war ii", "World War II"],
+  ["world war ii the war", "World War II"],
+  ["sino japanese war", "Sino-Japanese War"],
+  ["spanish american war", "Spanish-American War"],
+  ["iraq iran war", "Iran-Iraq War"],
+  ["indo pakistani war", "Indo-Pakistan War"],
+  ["1st indo pakistani war", "1st Indo-Pakistan War"],
+  ["2nd indo pakistani war", "2nd Indo-Pakistan War"],
+  ["3rd indo pakistani war", "3rd Indo-Pakistan War"],
+]);
+
+const ignoredWarNameFragments = new Set([
+  "war at sea",
+  "the war",
+  "the battle of the somme",
+  "eastern front",
+]);
+
+function inferWorldWarFromYear(year) {
+  if (year >= 1914 && year <= 1918) {
+    return "World War I";
+  }
+
+  if (year >= 1939 && year <= 1945) {
+    return "World War II";
+  }
+
+  return null;
+}
+
+function normalizeWarName(value, year) {
+  const names = parseList(value)
+    .flatMap((name) => name.split(";"))
+    .map((name) => name.trim().replace(/\s+/g, " "))
+    .filter(Boolean);
+
+  if (names.length === 0) {
+    return "Unclassified conflict";
+  }
+
+  const normalizedNames = [];
+  const seen = new Set();
+
+  for (const name of names) {
+    const lookupKey = normalizeWarLookupKey(name);
+
+    if (ignoredWarNameFragments.has(lookupKey)) {
+      continue;
+    }
+
+    const canonicalName =
+      warNameMappings.get(lookupKey) ??
+      (lookupKey === "world war" ? inferWorldWarFromYear(year) : null) ??
+      name.replace(/\s+/g, " ").trim();
+
+    const canonicalKey = normalizeWarLookupKey(canonicalName);
+
+    if (seen.has(canonicalKey)) {
+      continue;
+    }
+
+    normalizedNames.push(canonicalName);
+    seen.add(canonicalKey);
+  }
+
+  return normalizedNames.length > 0 ? normalizedNames.join("; ") : "Unclassified conflict";
+}
+
 function compact(values) {
   return values.filter((value) => value && value !== "NA").join("; ");
 }
@@ -149,6 +237,7 @@ function ensureSourceDownloaded() {
     return;
   }
 
+  mkdirSync(dirname(sourcePath), { recursive: true });
   execFileSync("curl", ["-L", sourceUrl, "-o", sourcePath], { stdio: "inherit" });
 }
 
@@ -268,7 +357,7 @@ const rows = rawRows
     return {
       event_id: row.ID,
       event_name: row.Battle || row.ID,
-      war_name: normalizeList(row.War) || "Unclassified conflict",
+      war_name: normalizeWarName(row.War, Number(row.Year)),
       year: String(Number(row.Year)),
       location_name: getLocationName(row),
       latitude: String(Number(row.Latitude)),
