@@ -1,4 +1,4 @@
-export type Battle = {
+export type ConflictEvent = {
   id: string;
   name: string;
   warId: string;
@@ -21,6 +21,8 @@ export type Battle = {
   source?: string;
 };
 
+export type Battle = ConflictEvent;
+
 export type War = {
   id: string;
   name: string;
@@ -38,16 +40,20 @@ export type Participant = {
 
 export type YearRange = [number, number];
 
-export type BattleFilters = {
+export type ConflictEventFilters = {
   selectedWarId: string | null;
   selectedYearRange: YearRange;
   selectedParticipant: string | null;
 };
 
-export type BattleSummary = {
+export type BattleFilters = ConflictEventFilters;
+
+export type ConflictEventSummary = {
   totalBattles: number;
   yearRange: YearRange | null;
   topParticipants: Array<[string, number]>;
   battlesByType: Record<string, number>;
   battlesByWar: Record<string, number>;
 };
+
+export type BattleSummary = ConflictEventSummary;

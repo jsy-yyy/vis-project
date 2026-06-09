@@ -51,6 +51,12 @@ button {
   color: var(--text-soft);
 }
 
+.screen-message-stack {
+  gap: 0.85rem;
+  align-content: center;
+  text-align: center;
+}
+
 .app-shell {
   min-height: 100vh;
 }
@@ -169,6 +175,15 @@ h1 {
   background: #151719;
   color: var(--text-soft);
   padding: 0 0.65rem;
+}
+
+.field input[type="search"] {
+  height: 2.1rem;
+}
+
+.stacked-control {
+  display: grid;
+  gap: 0.45rem;
 }
 
 .range-fields {
@@ -646,6 +661,23 @@ h1 {
   gap: 0.6rem;
   align-items: center;
   color: var(--text-soft);
+}
+
+.rank-row span,
+.bar-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.compact-empty,
+.muted-note {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.muted-note {
+  padding-top: 0.15rem;
 }
 
 .bar-row {

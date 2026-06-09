@@ -9,11 +9,12 @@ import { MapView } from "./components/views/MapView";
 import { NetworkView } from "./components/views/NetworkView";
 import { TimelineView } from "./components/views/TimelineView";
 import { useBattleData } from "./hooks/useBattleData";
-import { filterBattles, getBattleYearRange, getSelectedBattle, summarizeBattles } from "./lib/battleAnalytics";
+import { getTimelineSelectionState, getVisibleSelectedEvent } from "./lib/appState";
+import { filterBattles, getBattleYearRange, summarizeBattles } from "./lib/battleAnalytics";
 import type { YearRange } from "./types/domain";
 
 export default function App() {
-  const { battles, wars, participants, loading, error } = useBattleData();
+  const { battles, wars, participants, loading, error, retry } = useBattleData();
   const allYearRange = useMemo(() => getBattleYearRange(battles), [battles]);
   const [selectedWarId, setSelectedWarId] = useState<string | null>("all");
   const [selectedYearRange, setSelectedYearRange] = useState<YearRange>(allYearRange);
@@ -46,8 +47,8 @@ export default function App() {
     [currentYear, filteredBattles],
   );
   const selectedBattle = useMemo(
-    () => getSelectedBattle(mapBattles, selectedBattleId),
-    [mapBattles, selectedBattleId],
+    () => getVisibleSelectedEvent(filteredBattles, mapBattles, selectedBattleId),
+    [filteredBattles, mapBattles, selectedBattleId],
   );
 
   function updateYearRange(range: YearRange) {
@@ -61,12 +62,25 @@ export default function App() {
     setSelectedBattleId(null);
   }
 
+  function updateSelectedBattleFromTimeline(battleId: string) {
+    const nextState = getTimelineSelectionState(filteredBattles, battleId, currentYear);
+    setSelectedBattleId(nextState.selectedEventId);
+    setCurrentYear(nextState.currentYear);
+  }
+
   if (loading) {
     return <div className="screen-message">Loading HCED conflict events...</div>;
   }
 
   if (error) {
-    return <div className="screen-message">Failed to load conflict event data: {error.message}</div>;
+    return (
+      <div className="screen-message screen-message-stack">
+        <span>Failed to load conflict event data: {error.message}</span>
+        <button className="icon-text-button" type="button" onClick={retry}>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -105,7 +119,7 @@ export default function App() {
             allYearRange={allYearRange}
             selectedYearRange={selectedYearRange}
             currentYear={currentYear}
-            onSelectBattle={setSelectedBattleId}
+            onSelectBattle={updateSelectedBattleFromTimeline}
             onCurrentYearChange={updateCurrentYear}
           />
           <NetworkView
