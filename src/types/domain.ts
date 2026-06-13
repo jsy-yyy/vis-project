@@ -9,6 +9,7 @@ export type Battle = {
   longitude: number;
   locationName?: string;
   participants: string[];
+  actors?: Actor[];
   participantNames?: string[];
   rawParticipantNames?: string[];
   winnerNames?: string[];
@@ -20,6 +21,32 @@ export type Battle = {
   type?: string;
   description?: string;
   source?: string;
+};
+
+export type ActorRole = "participant" | "winner" | "loser" | "unknown";
+
+export type ActorType =
+  | "country"
+  | "empire"
+  | "alliance"
+  | "faction"
+  | "rebel_group"
+  | "civilian_group"
+  | "unknown";
+
+export type ActorConfidence = "high" | "medium" | "low";
+
+export type Actor = {
+  id: string;
+  rawName: string;
+  name: string;
+  role: ActorRole;
+  type: ActorType;
+  confidence: ActorConfidence;
+  mapTarget?: string;
+  networkEligible: boolean;
+  sourceField: string;
+  status: "mapped" | "mapped_internal" | "ambiguous" | "unmapped";
 };
 
 export type War = {
@@ -34,7 +61,7 @@ export type Participant = {
   id: string;
   name: string;
   side?: string;
-  type?: "country" | "empire" | "alliance" | "other";
+  type?: ActorType | "other";
 };
 
 export type YearRange = [number, number];

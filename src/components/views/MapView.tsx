@@ -34,6 +34,7 @@ type CountryHighlight = {
   winnerAllies: Set<string>;
   loserMain: Set<string>;
   loserAllies: Set<string>;
+  internalConflict: Set<string>;
 };
 
 const baseMarkerStyle: L.CircleMarkerOptions = {
@@ -80,6 +81,12 @@ const countryAliasByKey: Record<string, string | string[]> = {
   canadian: "Canada",
   china: "China",
   chinese: "China",
+  algeria: "Algeria",
+  benin: "Benin",
+  bosnia: "Bosnia",
+  "bosnia herzegovina": "Bosnia-Herzegovina",
+  croatia: "Croatia",
+  dahomey: "Benin",
   egypt: "Egypt",
   egyptian: "Egypt",
   ethiopia: "Ethiopia",
@@ -104,6 +111,10 @@ const countryAliasByKey: Record<string, string | string[]> = {
   japan: "Japan",
   japanese: "Japan",
   korea: "Korea",
+  "north korea": "Korea, People's Republic of",
+  "south korea": "Korea, Republic of",
+  lebanon: "Lebanon",
+  libya: "Libya",
   mexican: "Mexico",
   mexico: "Mexico",
   netherlands: "Netherlands",
@@ -116,15 +127,23 @@ const countryAliasByKey: Record<string, string | string[]> = {
   polish: "Poland",
   prussia: ["Germany (Prussia)", "German Federal Republic", "German Democratic Republic"],
   romanian: "Rumania",
+  romania: "Rumania",
   rumania: "Rumania",
   russia: "Russia (Soviet Union)",
   russian: "Russia (Soviet Union)",
   russians: "Russia (Soviet Union)",
   serbia: "Serbia",
+  "saudi arabia": "Saudi Arabia",
+  saudi: "Saudi Arabia",
+  saudis: "Saudi Arabia",
+  somalia: "Somalia",
+  "south africa": "South Africa",
   soviet: "Russia (Soviet Union)",
   soviets: "Russia (Soviet Union)",
   spain: "Spain",
   spanish: "Spain",
+  sudan: "Sudan",
+  syria: "Syria",
   turkey: "Turkey (Ottoman Empire)",
   turkish: "Turkey (Ottoman Empire)",
   turks: "Turkey (Ottoman Empire)",
@@ -132,6 +151,10 @@ const countryAliasByKey: Record<string, string | string[]> = {
   "united states": "United States of America",
   usa: "United States of America",
   ussr: "Russia (Soviet Union)",
+  vietnam: ["Vietnam", "Vietnam (Annam/Cochin China/Tonkin)", "Vietnam, Democratic Republic of", "Vietnam, Republic of"],
+  "north vietnam": "Vietnam, Democratic Republic of",
+  "south vietnam": "Vietnam, Republic of",
+  yugoslavia: "Yugoslavia",
 };
 
 const emptyCountryHighlight: CountryHighlight = {
@@ -140,6 +163,7 @@ const emptyCountryHighlight: CountryHighlight = {
   winnerAllies: new Set(),
   loserMain: new Set(),
   loserAllies: new Set(),
+  internalConflict: new Set(),
 };
 
 const cshapesSnapshots = [
@@ -266,8 +290,47 @@ function without(source: Set<string>, removed: Set<string>) {
 }
 
 function getBattleCountrySides(battle: Battle, countryLookup: Map<string, string>): CountryHighlight {
-  const winnerMain = resolveCountryNames(battle.winnerNames, countryLookup);
-  const loserMain = resolveCountryNames(battle.loserNames, countryLookup);
+  if (!battle.actors?.length) {
+    return {
+      selected: new Set(),
+      winnerMain: resolveCountryNames(battle.winnerNames, countryLookup),
+      winnerAllies: new Set(),
+      loserMain: resolveCountryNames(battle.loserNames, countryLookup),
+      loserAllies: new Set(),
+      internalConflict: new Set(),
+    };
+  }
+
+  const winnerMain = new Set<string>();
+  const loserMain = new Set<string>();
+  const internalConflict = new Set<string>();
+
+  for (const actor of battle.actors) {
+    if (actor.status === "ambiguous" || actor.status === "unmapped") {
+      continue;
+    }
+
+    if (actor.status === "mapped_internal") {
+      for (const countryName of resolveCountryName(actor.mapTarget || battle.eventCountry || "", countryLookup)) {
+        internalConflict.add(countryName);
+      }
+      continue;
+    }
+
+    if (!["country", "empire", "alliance"].includes(actor.type)) {
+      continue;
+    }
+
+    const targetCountries = resolveCountryName(actor.mapTarget || actor.name, countryLookup);
+
+    if (actor.role === "winner") {
+      mergeInto(winnerMain, new Set(targetCountries));
+    }
+
+    if (actor.role === "loser") {
+      mergeInto(loserMain, new Set(targetCountries));
+    }
+  }
 
   return {
     selected: new Set(),
@@ -275,6 +338,7 @@ function getBattleCountrySides(battle: Battle, countryLookup: Map<string, string
     winnerAllies: new Set(),
     loserMain,
     loserAllies: new Set(),
+    internalConflict,
   };
 }
 
@@ -285,6 +349,7 @@ function getAllHighlightedCountries(highlight: CountryHighlight) {
     ...highlight.winnerAllies,
     ...highlight.loserMain,
     ...highlight.loserAllies,
+    ...highlight.internalConflict,
   ]);
 }
 
@@ -311,6 +376,11 @@ function getCountryConflictHighlight(
       mergeInto(sameMain, without(sides.loserMain, selected));
       mergeInto(enemyMain, sides.winnerMain);
     }
+
+    if (sides.internalConflict.has(countryName)) {
+      mergeInto(enemyMain, sides.winnerMain);
+      mergeInto(enemyMain, sides.loserMain);
+    }
   }
 
   deleteFrom(sameMain, selected);
@@ -330,6 +400,7 @@ function getCountryConflictHighlight(
     winnerAllies: sameAllies,
     loserMain: enemyMain,
     loserAllies: enemyAllies,
+    internalConflict: new Set(),
   };
 }
 
@@ -340,6 +411,7 @@ function getHighlightKey(highlight: CountryHighlight) {
     [...highlight.winnerAllies].sort().join("|"),
     [...highlight.loserMain].sort().join("|"),
     [...highlight.loserAllies].sort().join("|"),
+    [...highlight.internalConflict].sort().join("|"),
   ].join("::");
 }
 
@@ -348,6 +420,11 @@ function getBattlePopup(battle: Battle) {
   const winner = battle.winnerNames?.join(", ") || "Unknown";
   const loser = battle.loserNames?.join(", ") || "Unknown";
   const participants = battle.participantNames?.join(", ") || "Unknown";
+  const internalActors =
+    battle.actors
+      ?.filter((actor) => actor.status === "mapped_internal")
+      .map((actor) => actor.mapTarget ? `${actor.name} -> ${actor.mapTarget}` : actor.name)
+      .join(", ") || "";
 
   return `
     <div class="battle-popup">
@@ -358,6 +435,7 @@ function getBattlePopup(battle: Battle) {
       <span>Winner: ${escapeHtml(winner)}</span>
       <span>Loser: ${escapeHtml(loser)}</span>
       <span>Participants: ${escapeHtml(participants)}</span>
+      ${internalActors ? `<span>Internal actors: ${escapeHtml(internalActors)}</span>` : ""}
       <span>${escapeHtml(battle.result ?? "Outcome unknown")}</span>
     </div>
   `;
@@ -408,6 +486,16 @@ function getBoundaryStyle(
       fillOpacity: 0.72,
       opacity: 1,
       weight: 3,
+    };
+  }
+
+  if (statename && highlight.internalConflict.has(statename)) {
+    return {
+      color: "#fffbeb",
+      fillColor: "#f59e0b",
+      fillOpacity: 0.64,
+      opacity: 1,
+      weight: 2.4,
     };
   }
 
@@ -596,7 +684,8 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
 
         if (
           (winnerSide.has(selectedCountryName) && loserSide.size > 0) ||
-          (loserSide.has(selectedCountryName) && winnerSide.size > 0)
+          (loserSide.has(selectedCountryName) && winnerSide.size > 0) ||
+          sides.internalConflict.has(selectedCountryName)
         ) {
           battleIds.add(battle.id);
         }
@@ -877,6 +966,12 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
             </small>
           </div>
           <div className="map-legend" aria-label="Conflict event type color legend">
+            {activeCountryHighlight.internalConflict.size > 0 ? (
+              <div>
+                <span style={{ "--legend-color": "#f59e0b" } as React.CSSProperties} />
+                <strong>Internal conflict</strong>
+              </div>
+            ) : null}
             {eventTypeLegend.map((style) => (
               <div key={style.type}>
                 <span style={{ "--legend-color": style.color } as React.CSSProperties} />
