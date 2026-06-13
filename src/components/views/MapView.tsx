@@ -3,13 +3,15 @@ import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPinned } from "lucide-react";
 import type * as GeoJSON from "geojson";
+import { formatEventType, formatOutcome } from "../../lib/displayLabels";
 import type { Battle } from "../../types/domain";
 
 type MapViewProps = {
   battles: Battle[];
   selectedBattleId: string | null;
   currentYear: number;
-  onSelectBattle: (battleId: string) => void;
+  onSelectBattle: (battleId: string | null) => void;
+  onResetFilters: () => void;
 };
 
 type SnapshotOption = {
@@ -188,8 +190,8 @@ const cshapesSnapshots = [
 ];
 
 const cshapesSnapshotOptions: SnapshotOption[] = [
-  { value: "auto", label: "Auto latest before current year" },
-  { value: "off", label: "Historical borders off" },
+  { value: "auto", label: "自动选择当前年前最近快照" },
+  { value: "off", label: "关闭历史边界" },
   ...cshapesSnapshots.map((snapshot) => ({ value: snapshot.date, label: snapshot.label })),
 ];
 
@@ -416,10 +418,10 @@ function getHighlightKey(highlight: CountryHighlight) {
 }
 
 function getBattlePopup(battle: Battle) {
-  const time = battle.endDate ? `${battle.startDate ?? battle.year} to ${battle.endDate}` : battle.startDate ?? battle.year;
-  const winner = battle.winnerNames?.join(", ") || "Unknown";
-  const loser = battle.loserNames?.join(", ") || "Unknown";
-  const participants = battle.participantNames?.join(", ") || "Unknown";
+  const time = battle.endDate ? `${battle.startDate ?? battle.year} 至 ${battle.endDate}` : battle.startDate ?? battle.year;
+  const winner = battle.winnerNames?.join(", ") || "未知";
+  const loser = battle.loserNames?.join(", ") || "未知";
+  const participants = battle.participantNames?.join(", ") || "未知";
   const internalActors =
     battle.actors
       ?.filter((actor) => actor.status === "mapped_internal")
@@ -430,13 +432,13 @@ function getBattlePopup(battle: Battle) {
     <div class="battle-popup">
       <strong>${escapeHtml(battle.name)}</strong>
       <span>${escapeHtml(time)}</span>
-      <span>${escapeHtml(battle.locationName ?? "Unknown location")}</span>
-      <span>${escapeHtml(battle.type ?? "Conflict event")}</span>
-      <span>Winner: ${escapeHtml(winner)}</span>
-      <span>Loser: ${escapeHtml(loser)}</span>
-      <span>Participants: ${escapeHtml(participants)}</span>
-      ${internalActors ? `<span>Internal actors: ${escapeHtml(internalActors)}</span>` : ""}
-      <span>${escapeHtml(battle.result ?? "Outcome unknown")}</span>
+      <span>${escapeHtml(battle.locationName ?? "未知地点")}</span>
+      <span>${escapeHtml(formatEventType(battle.type))}</span>
+      <span>胜方 winner：${escapeHtml(winner)}</span>
+      <span>败方 loser：${escapeHtml(loser)}</span>
+      <span>参战方 participants：${escapeHtml(participants)}</span>
+      ${internalActors ? `<span>内部行动者 internal actors：${escapeHtml(internalActors)}</span>` : ""}
+      <span>${escapeHtml(formatOutcome(battle.result))}</span>
     </div>
   `;
 }
@@ -449,7 +451,7 @@ function hashString(value: string) {
   return hash;
 }
 
-function getEventTypeColor(type = "Conflict event") {
+function getEventTypeColor(type = "冲突事件") {
   return eventTypePalette[hashString(type) % eventTypePalette.length];
 }
 
@@ -564,7 +566,7 @@ function getBoundaryPopup(properties: CShapesBoundaryProperties) {
     <div class="battle-popup">
       <strong>${escapeHtml(properties.statename)}</strong>
       <span>${escapeHtml(properties.snapshot_label)}</span>
-      <span>Source: ${escapeHtml(properties.source)}</span>
+      <span>来源：${escapeHtml(properties.source)}</span>
     </div>
   `;
 }
@@ -583,7 +585,7 @@ function getFeatureBounds(feature: GeoJSON.Feature<GeoJSON.Geometry>) {
   return L.geoJSON(feature).getBounds();
 }
 
-export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle }: MapViewProps) {
+export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle, onResetFilters }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const landLayerRef = useRef<L.GeoJSON | null>(null);
@@ -637,7 +639,7 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
     const counts = new Map<string, number>();
 
     for (const battle of battles) {
-      const type = battle.type ?? "Conflict event";
+      const type = battle.type ?? "冲突事件";
       counts.set(type, (counts.get(type) ?? 0) + 1);
     }
 
@@ -773,7 +775,7 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
     fetch("/data/basemaps/ne_110m_land.geojson")
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`Failed to load Natural Earth land layer: ${response.status}`);
+          throw new Error(`Natural Earth 陆地底图加载失败：${response.status}`);
         }
 
         return response.json() as Promise<LandCollection>;
@@ -790,7 +792,7 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
     fetch("/data/cshapes/cshapes_1886_2003_snapshots.geojson")
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`Failed to load CShapes snapshots: ${response.status}`);
+          throw new Error(`CShapes 历史边界快照加载失败：${response.status}`);
         }
 
         return response.json() as Promise<CShapesBoundaryCollection>;
@@ -945,14 +947,14 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
     <section className="view-panel map-panel">
       <div className="section-heading">
         <MapPinned size={18} />
-        <h2>Map View</h2>
+        <h2>地图视图</h2>
       </div>
-      <div className="map-stage" aria-label="Interactive conflict event map">
+      <div className="map-stage" aria-label="交互式冲突事件地图">
         <div className="leaflet-map-shell">
-          <div ref={mapContainerRef} className="leaflet-map" aria-label="Interactive world conflict event map" />
+          <div ref={mapContainerRef} className="leaflet-map" aria-label="交互式全球冲突事件地图" />
           <div className="boundary-control">
             <label>
-              <span>CShapes 2.0 boundary snapshot</span>
+              <span>CShapes 2.0 历史边界快照</span>
               <select value={selectedSnapshot} onChange={(event) => setSelectedSnapshot(event.target.value)}>
                 {cshapesSnapshotOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -962,27 +964,32 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
               </select>
             </label>
             <small>
-              Showing {cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? "off"}
+              当前显示：{cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? "关闭"}
             </small>
           </div>
-          <div className="map-legend" aria-label="Conflict event type color legend">
+          <div className="map-legend" aria-label="冲突事件类型颜色图例">
             {activeCountryHighlight.internalConflict.size > 0 ? (
               <div>
                 <span style={{ "--legend-color": "#f59e0b" } as React.CSSProperties} />
-                <strong>Internal conflict</strong>
+                <strong>内部冲突</strong>
               </div>
             ) : null}
             {eventTypeLegend.map((style) => (
               <div key={style.type}>
                 <span style={{ "--legend-color": style.color } as React.CSSProperties} />
-                <strong>{style.type}</strong>
+                <strong>{formatEventType(style.type)}</strong>
               </div>
             ))}
           </div>
         </div>
         <div className="map-list">
           {battles.length === 0 ? (
-            <div className="empty-state">No visible conflict events in {currentYear}.</div>
+            <div className="empty-state empty-state-with-action">
+              <p>{currentYear} 年没有可见的冲突事件。</p>
+              <button className="secondary-action-button" type="button" onClick={onResetFilters}>
+                重置筛选
+              </button>
+            </div>
           ) : (
             battles.slice(0, 8).map((battle) => (
               <button
@@ -1000,6 +1007,9 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
             <div className="map-selection">
               <strong>{selectedBattle.name}</strong>
               <span>{selectedBattle.locationName}</span>
+              <button className="secondary-action-button compact" type="button" onClick={() => onSelectBattle(null)}>
+                清除事件选择
+              </button>
             </div>
           ) : null}
         </div>

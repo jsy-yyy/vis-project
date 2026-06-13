@@ -88,7 +88,7 @@ export default function App() {
     setSelectedYearRange(range);
     setCurrentYear(nextYear);
     setYearAdjustmentMessage(
-      nextYear !== currentYear ? `Map year adjusted to ${nextYear} for the selected year window.` : null,
+      nextYear !== currentYear ? `地图年份已根据当前年份窗口调整为 ${nextYear}。` : null,
     );
     setSelectedBattleId(null);
   }
@@ -135,7 +135,7 @@ export default function App() {
     setSelectedWarId(warId);
     setCurrentYear(nextYear);
     setYearAdjustmentMessage(
-      nextYear !== currentYear ? `Map year adjusted to ${nextYear} for the selected conflict group.` : null,
+      nextYear !== currentYear ? `地图年份已根据当前冲突组 conflict group 调整为 ${nextYear}。` : null,
     );
     setSelectedBattleId(null);
   }
@@ -152,17 +152,17 @@ export default function App() {
     setSelectedParticipant(participantId);
     setCurrentYear(nextYear);
     setYearAdjustmentMessage(
-      nextYear !== currentYear ? `Map year adjusted to ${nextYear} for the selected participant.` : null,
+      nextYear !== currentYear ? `地图年份已根据当前参战方 participant 调整为 ${nextYear}。` : null,
     );
     setSelectedBattleId(null);
   }
 
   if (loading) {
-    return <div className="screen-message">Loading HCED conflict events...</div>;
+    return <div className="screen-message">正在加载 HCED 冲突事件数据...</div>;
   }
 
   if (error) {
-    return <div className="screen-message">Failed to load conflict event data: {error.message}</div>;
+    return <div className="screen-message">冲突事件数据加载失败：{error.message}</div>;
   }
 
   return (
@@ -196,10 +196,12 @@ export default function App() {
             selectedBattleId={selectedBattleId}
             currentYear={currentYear}
             onSelectBattle={setSelectedBattleId}
+            onResetFilters={resetFilters}
           />
           <TimelineView
             baselineBattles={timeWindowBattles}
             filteredBattles={resultBattles}
+            participants={participants}
             selectedBattleId={selectedBattleId}
             allYearRange={allYearRange}
             selectedYearRange={selectedYearRange}
@@ -207,12 +209,14 @@ export default function App() {
             yearAdjustmentMessage={yearAdjustmentMessage}
             onSelectBattle={setSelectedBattleId}
             onCurrentYearChange={updateCurrentYear}
+            onResetFilters={resetFilters}
           />
           <NetworkView
             battles={scopeBattles}
             participants={participants}
             selectedParticipant={selectedParticipant}
             onSelectParticipant={updateParticipantFilter}
+            onResetFilters={resetFilters}
           />
         </>
       }

@@ -49,4 +49,23 @@ describe("network analytics", () => {
     ]);
     expect(network.edges).toEqual([{ source: "british", target: "german", weight: 2 }]);
   });
+
+  it("builds a one-hop focus network around the selected participant", () => {
+    const network = buildParticipantNetwork(
+      [
+        createBattle("a", ["british", "german"]),
+        createBattle("b", ["british", "french"]),
+        createBattle("c", ["british", "french"]),
+        createBattle("d", ["italian", "german"]),
+      ],
+      2,
+      { focusedParticipantId: "british" },
+    );
+
+    expect(network.nodes).toEqual([
+      { id: "british", eventCount: 3 },
+      { id: "french", eventCount: 2 },
+    ]);
+    expect(network.edges).toEqual([{ source: "british", target: "french", weight: 2 }]);
+  });
 });

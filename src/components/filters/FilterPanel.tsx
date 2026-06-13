@@ -1,4 +1,5 @@
 import { RotateCcw, SlidersHorizontal } from "lucide-react";
+import { formatConflictGroupName } from "../../lib/displayLabels";
 import type { Participant, War, YearRange } from "../../types/domain";
 
 type FilterPanelProps = {
@@ -40,16 +41,16 @@ export function FilterPanel({
     <div className="filter-panel">
       <div className="panel-title-inline">
         <SlidersHorizontal size={18} />
-        <span>Global Filters</span>
+        <span>全局筛选</span>
       </div>
 
       <label className="field">
-        <span>Conflict group</span>
+        <span>冲突组 conflict group</span>
         <select value={selectedWarId ?? "all"} onChange={(event) => onWarChange(event.target.value)}>
-          <option value="all">All conflict groups</option>
+          <option value="all">全部冲突组</option>
           {wars.map((war) => (
             <option key={war.id} value={war.id}>
-              {war.name}
+              {formatConflictGroupName(war.name)}
             </option>
           ))}
         </select>
@@ -57,7 +58,7 @@ export function FilterPanel({
 
       <div className="range-fields">
         <label className="field">
-          <span>Start year</span>
+          <span>起始年份</span>
           <input
             type="number"
             min={minYear}
@@ -67,7 +68,7 @@ export function FilterPanel({
           />
         </label>
         <label className="field">
-          <span>End year</span>
+          <span>结束年份</span>
           <input
             type="number"
             min={minYear}
@@ -79,12 +80,12 @@ export function FilterPanel({
       </div>
 
       <label className="field">
-        <span>Participant</span>
+        <span>参战方 participant</span>
         <select
           value={selectedParticipant ?? "all"}
           onChange={(event) => onParticipantChange(event.target.value === "all" ? null : event.target.value)}
         >
-          <option value="all">All participants</option>
+          <option value="all">全部参战方</option>
           {participants.map((participant) => (
             <option key={participant.id} value={participant.id}>
               {participant.name}
@@ -99,7 +100,7 @@ export function FilterPanel({
         onClick={onReset}
       >
         <RotateCcw size={16} />
-        Reset
+        重置
       </button>
     </div>
   );

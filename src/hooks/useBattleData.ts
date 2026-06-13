@@ -200,7 +200,7 @@ export function useBattleData(): BattleDataState {
     fetch(hcedCsvPath)
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`Failed to load HCED conflict events: ${response.status}`);
+          throw new Error(`HCED 冲突事件数据加载失败：${response.status}`);
         }
         return response.text();
       })

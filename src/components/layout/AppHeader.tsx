@@ -17,18 +17,18 @@ export function AppHeader({ totalBattles, filteredBattles, visibleMapBattles, cu
           使用 HCED 军事冲突事件点与 CShapes 2.0 历史边界，联动地图、时间轴、参战方网络、统计和详情。
         </p>
       </div>
-      <div className="header-metrics" aria-label="Project summary">
+      <div className="header-metrics" aria-label="项目概览">
         <div className="metric-chip">
           <Database size={18} />
-          <span>{totalBattles} HCED events</span>
+          <span>{totalBattles} 条 HCED 事件</span>
         </div>
         <div className="metric-chip">
           <SlidersHorizontal size={18} />
-          <span>{filteredBattles} matching filters</span>
+          <span>{filteredBattles} 条符合筛选</span>
         </div>
         <div className="metric-chip">
           <Crosshair size={18} />
-          <span>{visibleMapBattles} visible on map</span>
+          <span>{visibleMapBattles} 条地图可见</span>
         </div>
         <div className="metric-chip">
           <Timer size={18} />

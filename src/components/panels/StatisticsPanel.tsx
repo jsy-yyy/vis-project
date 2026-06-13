@@ -1,4 +1,5 @@
 import { Activity } from "lucide-react";
+import { formatConflictGroupName, formatEventType } from "../../lib/displayLabels";
 import type { BattleSummary, Participant, War } from "../../types/domain";
 
 type StatisticsPanelProps = {
@@ -18,20 +19,20 @@ export function StatisticsPanel({ summary, wars, participants }: StatisticsPanel
     <section className="side-panel">
       <div className="section-heading">
         <Activity size={18} />
-        <h2>Statistics</h2>
+        <h2>统计概览</h2>
       </div>
       <div className="stat-grid">
         <div>
           <strong>{summary.totalBattles}</strong>
-          <span>Conflict events</span>
+          <span>冲突事件</span>
         </div>
         <div>
-          <strong>{summary.yearRange ? `${summary.yearRange[0]}-${summary.yearRange[1]}` : "None"}</strong>
-          <span>Visible range</span>
+          <strong>{summary.yearRange ? `${summary.yearRange[0]}-${summary.yearRange[1]}` : "无"}</strong>
+          <span>当前年份范围</span>
         </div>
       </div>
       <div className="mini-section">
-        <h3>Top participants</h3>
+        <h3>活跃参战方 participant</h3>
         {summary.topParticipants.slice(0, 5).map(([participantId, count]) => (
           <div className="rank-row" key={participantId}>
             <span>{lookupName(participantId, participants)}</span>
@@ -40,10 +41,10 @@ export function StatisticsPanel({ summary, wars, participants }: StatisticsPanel
         ))}
       </div>
       <div className="mini-section">
-        <h3>Event types</h3>
+        <h3>事件类型</h3>
         {Object.entries(summary.battlesByType).map(([type, count]) => (
           <div className="bar-row" key={type}>
-            <span>{type}</span>
+            <span>{formatEventType(type)}</span>
             <div className="bar-shell">
               <div className="bar-fill" style={{ width: `${(count / maxTypeCount) * 100}%` }} />
             </div>
@@ -52,10 +53,10 @@ export function StatisticsPanel({ summary, wars, participants }: StatisticsPanel
         ))}
       </div>
       <div className="mini-section">
-        <h3>Conflict groups</h3>
+        <h3>冲突组 conflict group</h3>
         {Object.entries(summary.battlesByWar).map(([warId, count]) => (
           <div className="rank-row" key={warId}>
-            <span>{lookupName(warId, wars)}</span>
+            <span>{formatConflictGroupName(lookupName(warId, wars))}</span>
             <strong>{count}</strong>
           </div>
         ))}
