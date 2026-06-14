@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { BarChart3 } from "lucide-react";
 import {
   getTimelinePeriodComparison,
   getYearlyEventCounts,
   getYearlyEventSummary,
 } from "../../lib/timelineAnalytics";
-import { formatConflictGroupId } from "../../lib/displayLabels";
-import type { Battle, Participant, YearRange } from "../../types/domain";
+import type { Battle, Participant, War, YearRange } from "../../types/domain";
 
 type TimelineViewProps = {
   baselineBattles: Battle[];
   filteredBattles: Battle[];
+  wars: War[];
   participants: Participant[];
   selectedBattleId: string | null;
   allYearRange: YearRange;
@@ -23,10 +24,12 @@ type TimelineViewProps = {
 };
 
 const eventListLimit = 24;
+const eventListPageSize = 24;
 
 export function TimelineView({
   baselineBattles,
   filteredBattles,
+  wars,
   participants,
   selectedBattleId,
   allYearRange,
@@ -39,9 +42,14 @@ export function TimelineView({
 }: TimelineViewProps) {
   const chartScrollRef = useRef<HTMLDivElement | null>(null);
   const selectedBarRef = useRef<HTMLButtonElement | null>(null);
+  const [visibleEventCount, setVisibleEventCount] = useState(eventListLimit);
   const participantNames = useMemo(
     () => new Map(participants.map((participant) => [participant.id, participant.name])),
     [participants],
+  );
+  const warNames = useMemo(
+    () => new Map(wars.map((war) => [war.id, war.name])),
+    [wars],
   );
   const sortedBattles = useMemo(
     () => [...filteredBattles].sort((a, b) => a.year - b.year || a.name.localeCompare(b.name)),
@@ -51,7 +59,8 @@ export function TimelineView({
     () => sortedBattles.filter((battle) => battle.year === currentYear),
     [currentYear, sortedBattles],
   );
-  const visibleCurrentYearBattles = currentYearBattles.slice(0, eventListLimit);
+  const visibleCurrentYearBattles = currentYearBattles.slice(0, visibleEventCount);
+  const hasHiddenCurrentYearBattles = visibleEventCount < currentYearBattles.length;
   const [absoluteMinYear, absoluteMaxYear] = allYearRange;
   const [minYear, maxYear] = selectedYearRange;
 
@@ -68,7 +77,8 @@ export function TimelineView({
     [filteredYearlyCounts],
   );
   const maxCount = Math.max(1, ...baselineYearlyCounts.map((item) => item.count));
-  const middleCount = Math.ceil(maxCount / 2);
+  const maxScaledCount = Math.sqrt(maxCount);
+  const middleCount = Math.ceil(maxCount / 4);
   const currentYearCount = filteredCountByYear.get(currentYear) ?? 0;
   const yearTickInterval =
     baselineYearlyCounts.length <= 20 ? 1 : baselineYearlyCounts.length <= 60 ? 5 : 10;
@@ -83,6 +93,10 @@ export function TimelineView({
 
   function getParticipantLabel(participantId: string) {
     return participantNames.get(participantId) ?? participantId;
+  }
+
+  function getConflictGroupLabel(warId: string) {
+    return warNames.get(warId) ?? warId;
   }
 
   function formatRange(range: YearRange | null) {
@@ -107,9 +121,29 @@ export function TimelineView({
     });
   }, [currentYear]);
 
+  useEffect(() => {
+    setVisibleEventCount(eventListLimit);
+  }, [currentYear, filteredBattles, selectedYearRange]);
+
   function handleBattleSelect(battle: Battle) {
     onCurrentYearChange(battle.year);
     onSelectBattle(battle.id);
+  }
+
+  function handleBarKeyDown(event: KeyboardEvent<HTMLButtonElement>, year: number) {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      onCurrentYearChange(Math.max(minYear, year - 1));
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      onCurrentYearChange(Math.min(maxYear, year + 1));
+    }
+  }
+
+  function getScaledHeight(count: number) {
+    return `${(Math.sqrt(count) / maxScaledCount) * 100}%`;
   }
 
   return (
@@ -159,9 +193,10 @@ export function TimelineView({
           <p>对比年份窗口内的整体背景与当前筛选结果。点击柱子可切换地图年份。</p>
         </div>
         <div className="timeline-legend" aria-label="时间轴图例">
-          <span><i className="baseline" />年份窗口内全部事件</span>
-          <span><i className="filtered" />符合当前筛选</span>
-          <span><i className="selected" />当前地图年份</span>
+          <span><i className="baseline" />外层：年份窗口全部事件</span>
+          <span><i className="filtered" />内层：符合当前筛选</span>
+          <span><i className="selected" />描边：当前地图年份</span>
+          <span><i className="scaled" />柱高：平方根缩放</span>
         </div>
       </div>
       <div className="timeline-chart-frame">
@@ -192,19 +227,20 @@ export function TimelineView({
                   aria-label={`${year} 年：${filteredCount} 条符合筛选的冲突事件，${count} 条总冲突事件`}
                   aria-pressed={selected}
                   onClick={() => onCurrentYearChange(year)}
+                  onKeyDown={(event) => handleBarKeyDown(event, year)}
                 >
                   <span className="timeline-bar-slot">
                     <span
                       className="timeline-bar-fill baseline"
                       style={{
-                        height: `${(count / maxCount) * 100}%`,
+                        height: getScaledHeight(count),
                         minHeight: count > 0 ? "2px" : undefined,
                       }}
                     />
                     <span
                       className="timeline-bar-fill filtered"
                       style={{
-                        height: `${(filteredCount / maxCount) * 100}%`,
+                        height: getScaledHeight(filteredCount),
                         minHeight: filteredCount > 0 ? "2px" : undefined,
                       }}
                     />
@@ -240,7 +276,7 @@ export function TimelineView({
               <dd>
                 {currentYearSummary.topConflictGroups.length > 0
                   ? currentYearSummary.topConflictGroups
-                      .map(([group, count]) => `${formatConflictGroupId(group)} (${count})`)
+                      .map(([group, count]) => `${getConflictGroupLabel(group)} (${count})`)
                       .join(", ")
                   : "没有匹配的冲突组"}
               </dd>
@@ -306,6 +342,27 @@ export function TimelineView({
           ))}
         </div>
       )}
+      {currentYearBattles.length > eventListLimit ? (
+        <div className="timeline-list-actions">
+          {hasHiddenCurrentYearBattles ? (
+            <button
+              className="secondary-action-button compact"
+              type="button"
+              onClick={() => setVisibleEventCount((count) => Math.min(count + eventListPageSize, currentYearBattles.length))}
+            >
+              查看更多事件
+            </button>
+          ) : (
+            <button
+              className="secondary-action-button compact"
+              type="button"
+              onClick={() => setVisibleEventCount(eventListLimit)}
+            >
+              收起事件列表
+            </button>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }

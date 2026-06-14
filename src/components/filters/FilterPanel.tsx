@@ -1,5 +1,4 @@
 import { RotateCcw, SlidersHorizontal } from "lucide-react";
-import { formatConflictGroupName } from "../../lib/displayLabels";
 import type { Participant, War, YearRange } from "../../types/domain";
 
 type FilterPanelProps = {
@@ -50,7 +49,7 @@ export function FilterPanel({
           <option value="all">全部冲突组</option>
           {wars.map((war) => (
             <option key={war.id} value={war.id}>
-              {formatConflictGroupName(war.name)}
+              {war.name}
             </option>
           ))}
         </select>

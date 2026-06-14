@@ -26,6 +26,7 @@ export default function App() {
   const [currentYear, setCurrentYear] = useState(allYearRange[1]);
   const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
   const [selectedBattleId, setSelectedBattleId] = useState<string | null>(null);
+  const [detailStatusMessage, setDetailStatusMessage] = useState<string | null>(null);
   const [yearAdjustmentMessage, setYearAdjustmentMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,6 +76,22 @@ export default function App() {
     [mapBattles, selectedBattleId],
   );
 
+  function syncSelectedBattleAfterScopeChange(nextBattles: typeof battles, nextYear: number, message: string) {
+    if (!selectedBattleId) {
+      setDetailStatusMessage(null);
+      return;
+    }
+
+    const stillVisible = nextBattles.some((battle) => battle.id === selectedBattleId && battle.year === nextYear);
+    if (stillVisible) {
+      setDetailStatusMessage(null);
+      return;
+    }
+
+    setDetailStatusMessage(message);
+    setSelectedBattleId(null);
+  }
+
   function updateYearRange(range: YearRange) {
     const nextBattles = filterBattles(battles, {
       selectedWarId,
@@ -90,13 +107,26 @@ export default function App() {
     setYearAdjustmentMessage(
       nextYear !== currentYear ? `地图年份已根据当前年份窗口调整为 ${nextYear}。` : null,
     );
-    setSelectedBattleId(null);
+    syncSelectedBattleAfterScopeChange(
+      nextBattles,
+      nextYear,
+      "年份范围变化后，原选中事件已不在当前地图范围内，详情已清空。",
+    );
   }
 
   function updateCurrentYear(year: number) {
     setCurrentYear(year);
     setYearAdjustmentMessage(null);
-    setSelectedBattleId(null);
+    syncSelectedBattleAfterScopeChange(
+      resultBattles,
+      year,
+      "地图年份切换后，原选中事件已不在当前地图年份中，详情已清空。",
+    );
+  }
+
+  function updateSelectedBattle(battleId: string | null) {
+    setSelectedBattleId(battleId);
+    setDetailStatusMessage(null);
   }
 
   function resetFilters() {
@@ -105,6 +135,7 @@ export default function App() {
     setSelectedParticipant(null);
     setCurrentYear(allYearRange[1]);
     setYearAdjustmentMessage(null);
+    setDetailStatusMessage(null);
     setSelectedBattleId(null);
   }
 
@@ -120,6 +151,7 @@ export default function App() {
     setSelectedParticipant(null);
     setCurrentYear(getClosestBattleYear(nextBattles, range[1]));
     setYearAdjustmentMessage(null);
+    setDetailStatusMessage(null);
     setSelectedBattleId(null);
   }
 
@@ -137,7 +169,11 @@ export default function App() {
     setYearAdjustmentMessage(
       nextYear !== currentYear ? `地图年份已根据当前冲突组 conflict group 调整为 ${nextYear}。` : null,
     );
-    setSelectedBattleId(null);
+    syncSelectedBattleAfterScopeChange(
+      nextBattles,
+      nextYear,
+      "冲突组筛选变化后，原选中事件已不在当前结果中，详情已清空。",
+    );
   }
 
   function updateParticipantFilter(participantId: string | null) {
@@ -154,7 +190,11 @@ export default function App() {
     setYearAdjustmentMessage(
       nextYear !== currentYear ? `地图年份已根据当前参战方 participant 调整为 ${nextYear}。` : null,
     );
-    setSelectedBattleId(null);
+    syncSelectedBattleAfterScopeChange(
+      nextBattles,
+      nextYear,
+      "参战方筛选变化后，原选中事件已不在当前结果中，详情已清空。",
+    );
   }
 
   if (loading) {
@@ -193,26 +233,30 @@ export default function App() {
         <>
           <MapView
             battles={mapBattles}
+            heatmapBattles={resultBattles}
             selectedBattleId={selectedBattleId}
             currentYear={currentYear}
-            onSelectBattle={setSelectedBattleId}
+            selectedWarId={selectedWarId}
+            onSelectBattle={updateSelectedBattle}
             onResetFilters={resetFilters}
           />
           <TimelineView
             baselineBattles={timeWindowBattles}
             filteredBattles={resultBattles}
+            wars={wars}
             participants={participants}
             selectedBattleId={selectedBattleId}
             allYearRange={allYearRange}
             selectedYearRange={selectedYearRange}
             currentYear={currentYear}
             yearAdjustmentMessage={yearAdjustmentMessage}
-            onSelectBattle={setSelectedBattleId}
+            onSelectBattle={updateSelectedBattle}
             onCurrentYearChange={updateCurrentYear}
             onResetFilters={resetFilters}
           />
           <NetworkView
             battles={scopeBattles}
+            wars={wars}
             participants={participants}
             selectedParticipant={selectedParticipant}
             onSelectParticipant={updateParticipantFilter}
@@ -223,7 +267,12 @@ export default function App() {
       sidebar={
         <>
           <StatisticsPanel summary={summary} wars={wars} participants={participants} />
-          <DetailPanel battle={selectedBattle} wars={wars} participants={participants} />
+          <DetailPanel
+            battle={selectedBattle}
+            wars={wars}
+            participants={participants}
+            emptyMessage={detailStatusMessage}
+          />
           <CaseStudyPanel onApplyCaseStudy={applyCaseStudy} />
         </>
       }

@@ -1,5 +1,4 @@
 import { Activity } from "lucide-react";
-import { formatConflictGroupName, formatEventType } from "../../lib/displayLabels";
 import type { BattleSummary, Participant, War } from "../../types/domain";
 
 type StatisticsPanelProps = {
@@ -44,7 +43,7 @@ export function StatisticsPanel({ summary, wars, participants }: StatisticsPanel
         <h3>事件类型</h3>
         {Object.entries(summary.battlesByType).map(([type, count]) => (
           <div className="bar-row" key={type}>
-            <span>{formatEventType(type)}</span>
+            <span>{type}</span>
             <div className="bar-shell">
               <div className="bar-fill" style={{ width: `${(count / maxTypeCount) * 100}%` }} />
             </div>
@@ -56,7 +55,7 @@ export function StatisticsPanel({ summary, wars, participants }: StatisticsPanel
         <h3>冲突组 conflict group</h3>
         {Object.entries(summary.battlesByWar).map(([warId, count]) => (
           <div className="rank-row" key={warId}>
-            <span>{formatConflictGroupName(lookupName(warId, wars))}</span>
+            <span>{lookupName(warId, wars)}</span>
             <strong>{count}</strong>
           </div>
         ))}

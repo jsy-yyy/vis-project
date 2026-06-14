@@ -17,7 +17,7 @@ export function CaseStudyPanel({ onApplyCaseStudy }: CaseStudyPanelProps) {
           type="button"
           onClick={() => onApplyCaseStudy("world-war-i", [1914, 1918])}
         >
-          <strong>第一次世界大战</strong>
+          <strong>World War I</strong>
           <span>查看 1914-1918 年全球冲突窗口中的 HCED 事件。</span>
           <small>重点观察时间轴上的事件集中期，以及中欧参战方 participant 的共现簇。</small>
         </button>
@@ -25,7 +25,7 @@ export function CaseStudyPanel({ onApplyCaseStudy }: CaseStudyPanelProps) {
           type="button"
           onClick={() => onApplyCaseStudy("world-war-ii", [1939, 1945])}
         >
-          <strong>第二次世界大战</strong>
+          <strong>World War II</strong>
           <span>结合历史国家边界追踪 1939-1945 年的全球事件点。</span>
           <small>先用网络比较主要共现关系，再在时间轴选择事件高峰年份。</small>
         </button>

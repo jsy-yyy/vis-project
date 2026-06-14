@@ -3,13 +3,14 @@ import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPinned } from "lucide-react";
 import type * as GeoJSON from "geojson";
-import { formatEventType, formatOutcome } from "../../lib/displayLabels";
 import type { Battle } from "../../types/domain";
 
 type MapViewProps = {
   battles: Battle[];
+  heatmapBattles: Battle[];
   selectedBattleId: string | null;
   currentYear: number;
+  selectedWarId: string | null;
   onSelectBattle: (battleId: string | null) => void;
   onResetFilters: () => void;
 };
@@ -29,6 +30,12 @@ type CShapesBoundaryProperties = {
 
 type CShapesBoundaryCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, CShapesBoundaryProperties>;
 type LandCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry>;
+
+type MapHeatCell = {
+  key: string;
+  bounds: L.LatLngBoundsExpression;
+  count: number;
+};
 
 type CountryHighlight = {
   selected: Set<string>;
@@ -64,6 +71,7 @@ const eventTypePalette = [
   "#f0a36b",
   "#aeb6ad",
 ];
+const mapHeatGridSize = 5;
 
 const countryAliasByKey: Record<string, string | string[]> = {
   america: "United States of America",
@@ -433,12 +441,12 @@ function getBattlePopup(battle: Battle) {
       <strong>${escapeHtml(battle.name)}</strong>
       <span>${escapeHtml(time)}</span>
       <span>${escapeHtml(battle.locationName ?? "未知地点")}</span>
-      <span>${escapeHtml(formatEventType(battle.type))}</span>
+      <span>${escapeHtml(battle.type ?? "冲突事件")}</span>
       <span>胜方 winner：${escapeHtml(winner)}</span>
       <span>败方 loser：${escapeHtml(loser)}</span>
       <span>参战方 participants：${escapeHtml(participants)}</span>
       ${internalActors ? `<span>内部行动者 internal actors：${escapeHtml(internalActors)}</span>` : ""}
-      <span>${escapeHtml(formatOutcome(battle.result))}</span>
+      <span>${escapeHtml(battle.result ?? "结果未知")}</span>
     </div>
   `;
 }
@@ -585,18 +593,74 @@ function getFeatureBounds(feature: GeoJSON.Feature<GeoJSON.Geometry>) {
   return L.geoJSON(feature).getBounds();
 }
 
-export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle, onResetFilters }: MapViewProps) {
+function getMapHeatCells(battles: Battle[]) {
+  const cells = new Map<string, { latitudeSum: number; longitudeSum: number; count: number }>();
+
+  for (const battle of battles) {
+    const latCell = Math.floor((battle.latitude + 90) / mapHeatGridSize);
+    const lngCell = Math.floor((battle.longitude + 180) / mapHeatGridSize);
+    const key = `${latCell}:${lngCell}`;
+    const cell = cells.get(key) ?? { latitudeSum: 0, longitudeSum: 0, count: 0 };
+
+    cell.latitudeSum += battle.latitude;
+    cell.longitudeSum += battle.longitude;
+    cell.count += 1;
+    cells.set(key, cell);
+  }
+
+  return Array.from(cells.entries())
+    .map(([key, cell]): MapHeatCell => {
+      const [latCell, lngCell] = key.split(":").map(Number);
+      const south = latCell * mapHeatGridSize - 90;
+      const west = lngCell * mapHeatGridSize - 180;
+
+      return {
+        key,
+        bounds: [
+          [south, west],
+          [south + mapHeatGridSize, west + mapHeatGridSize],
+        ],
+        count: cell.count,
+      };
+    })
+    .sort((left, right) => right.count - left.count);
+}
+
+export function MapView({
+  battles,
+  heatmapBattles,
+  selectedBattleId,
+  currentYear,
+  selectedWarId,
+  onSelectBattle,
+  onResetFilters,
+}: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const landLayerRef = useRef<L.GeoJSON | null>(null);
   const boundaryLayerRef = useRef<L.GeoJSON | null>(null);
+  const heatLayerRef = useRef<L.FeatureGroup | null>(null);
   const battleLayerRef = useRef<L.FeatureGroup | null>(null);
   const markerRefs = useRef<Map<string, L.CircleMarker>>(new Map());
   const [selectedSnapshot, setSelectedSnapshot] = useState("auto");
   const [selectedCountryName, setSelectedCountryName] = useState<string | null>(null);
   const [landCollection, setLandCollection] = useState<LandCollection | null>(null);
   const [boundaryCollection, setBoundaryCollection] = useState<CShapesBoundaryCollection | null>(null);
-  const effectiveSnapshot = selectedSnapshot === "auto" ? getSnapshotForYear(currentYear).date : selectedSnapshot;
+  const [yearFeedbackActive, setYearFeedbackActive] = useState(false);
+  const allConflictGroupMode = selectedWarId === "all" || selectedWarId === null;
+  const heatCells = useMemo(() => getMapHeatCells(heatmapBattles), [heatmapBattles]);
+  const maxHeatCellCount = Math.max(1, ...heatCells.map((cell) => cell.count));
+  const effectiveSnapshot = allConflictGroupMode
+    ? "off"
+    : selectedSnapshot === "auto"
+      ? getSnapshotForYear(currentYear).date
+      : selectedSnapshot;
+  const effectiveSnapshotLabel =
+    allConflictGroupMode
+      ? "全部冲突组：事件密度热力图"
+      : effectiveSnapshot === "off"
+      ? "历史边界已关闭"
+      : `CShapes 快照 ${cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? effectiveSnapshot}`;
   const countryLookup = useMemo(() => {
     const features = boundaryCollection?.features ?? [];
     const snapshotFeatures =
@@ -656,6 +720,13 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
   useEffect(() => {
     setSelectedCountryName(null);
   }, [battles, currentYear]);
+
+  useEffect(() => {
+    setYearFeedbackActive(true);
+    const timeoutId = window.setTimeout(() => setYearFeedbackActive(false), 900);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentYear, effectiveSnapshot]);
   const activeCountryHighlight = useMemo(() => {
     if (selectedCountryName) {
       return getCountryConflictHighlight(selectedCountryName, battles, countryLookup);
@@ -833,16 +904,20 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
     });
 
     const battleLayer = L.featureGroup().addTo(map);
+    const heatLayer = L.featureGroup().addTo(map);
     mapRef.current = map;
+    heatLayerRef.current = heatLayer;
     battleLayerRef.current = battleLayer;
 
     return () => {
       landLayerRef.current?.remove();
       boundaryLayerRef.current?.remove();
+      heatLayerRef.current?.remove();
       map.remove();
       mapRef.current = null;
       landLayerRef.current = null;
       boundaryLayerRef.current = null;
+      heatLayerRef.current = null;
       battleLayerRef.current = null;
       markerRefs.current.clear();
     };
@@ -863,10 +938,41 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
     }).addTo(map);
 
     landLayer.bringToBack();
+    heatLayerRef.current?.bringToFront();
     landLayerRef.current = landLayer;
     boundaryLayerRef.current?.bringToFront();
     battleLayerRef.current?.bringToFront();
   }, [landCollection]);
+
+  useEffect(() => {
+    const heatLayer = heatLayerRef.current;
+
+    if (!heatLayer) {
+      return;
+    }
+
+    heatLayer.clearLayers();
+
+    if (!allConflictGroupMode) {
+      return;
+    }
+
+    for (const cell of heatCells) {
+      const intensity = cell.count / maxHeatCellCount;
+      const heatMarker = L.rectangle(cell.bounds, {
+        color: "rgba(255, 243, 191, 0.08)",
+        weight: 0.5,
+        fillColor: "#d47b5d",
+        fillOpacity: 0.05 + Math.sqrt(intensity) * 0.62,
+        interactive: false,
+      });
+
+      heatMarker.addTo(heatLayer);
+    }
+
+    heatLayer.bringToFront();
+    battleLayerRef.current?.bringToFront();
+  }, [allConflictGroupMode, heatCells, maxHeatCellCount]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -952,10 +1058,23 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
       <div className="map-stage" aria-label="交互式冲突事件地图">
         <div className="leaflet-map-shell">
           <div ref={mapContainerRef} className="leaflet-map" aria-label="交互式全球冲突事件地图" />
+          <div
+            className={yearFeedbackActive ? "map-year-feedback active" : "map-year-feedback"}
+            role="status"
+            aria-live="polite"
+          >
+            <strong>{currentYear}</strong>
+            <span>{effectiveSnapshotLabel}</span>
+          </div>
           <div className="boundary-control">
             <label>
-              <span>CShapes 2.0 历史边界快照</span>
-              <select value={selectedSnapshot} onChange={(event) => setSelectedSnapshot(event.target.value)}>
+              <span>{allConflictGroupMode ? "地图表达方式" : "CShapes 2.0 历史边界快照"}</span>
+              <select
+                value={allConflictGroupMode ? "heatmap" : selectedSnapshot}
+                disabled={allConflictGroupMode}
+                onChange={(event) => setSelectedSnapshot(event.target.value)}
+              >
+                {allConflictGroupMode ? <option value="heatmap">事件密度热力图</option> : null}
                 {cshapesSnapshotOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -964,22 +1083,33 @@ export function MapView({ battles, selectedBattleId, currentYear, onSelectBattle
               </select>
             </label>
             <small>
-              当前显示：{cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? "关闭"}
+              当前显示：{effectiveSnapshotLabel}
             </small>
           </div>
           <div className="map-legend" aria-label="冲突事件类型颜色图例">
-            {activeCountryHighlight.internalConflict.size > 0 ? (
+            {allConflictGroupMode ? (
+              <>
+                <div>
+                  <span style={{ "--legend-color": "#d47b5d" } as React.CSSProperties} />
+                  <strong>事件密度越高颜色越深</strong>
+                </div>
+                <div>
+                  <span style={{ "--legend-color": "#fff3bf" } as React.CSSProperties} />
+                  <strong>小点仍可点击查看事件</strong>
+                </div>
+              </>
+            ) : activeCountryHighlight.internalConflict.size > 0 ? (
               <div>
                 <span style={{ "--legend-color": "#f59e0b" } as React.CSSProperties} />
                 <strong>内部冲突</strong>
               </div>
             ) : null}
-            {eventTypeLegend.map((style) => (
+            {!allConflictGroupMode ? eventTypeLegend.map((style) => (
               <div key={style.type}>
                 <span style={{ "--legend-color": style.color } as React.CSSProperties} />
-                <strong>{formatEventType(style.type)}</strong>
+                <strong>{style.type}</strong>
               </div>
-            ))}
+            )) : null}
           </div>
         </div>
         <div className="map-list">
