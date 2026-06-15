@@ -9,3 +9,5 @@ doc/
 *.out
 *.synctex.gz
 *.tsbuildinfo
+
+.DS_Store

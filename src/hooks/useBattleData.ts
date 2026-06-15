@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Actor, Battle, Participant, War } from "../types/domain";
 
 type BattleDataState = {
@@ -7,6 +7,7 @@ type BattleDataState = {
   participants: Participant[];
   loading: boolean;
   error: Error | null;
+  retry: () => void;
 };
 
 type HcedEventRow = {
@@ -186,16 +187,26 @@ function mapRows(rows: HcedEventRow[]) {
 }
 
 export function useBattleData(): BattleDataState {
+  const [reloadToken, setReloadToken] = useState(0);
   const [state, setState] = useState<BattleDataState>({
     battles: [],
     wars: [],
     participants: [],
     loading: true,
     error: null,
+    retry: () => {},
   });
+  const retry = useCallback(() => setReloadToken((token) => token + 1), []);
 
   useEffect(() => {
     let active = true;
+
+    setState((currentState) => ({
+      ...currentState,
+      loading: true,
+      error: null,
+      retry,
+    }));
 
     fetch(hcedCsvPath)
       .then((response) => {
@@ -213,6 +224,7 @@ export function useBattleData(): BattleDataState {
           ...mapRows(parseCsv(text)),
           loading: false,
           error: null,
+          retry,
         });
       })
       .catch((error: unknown) => {
@@ -226,13 +238,14 @@ export function useBattleData(): BattleDataState {
           participants: [],
           loading: false,
           error: error instanceof Error ? error : new Error(String(error)),
+          retry,
         });
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadToken, retry]);
 
   return state;
 }

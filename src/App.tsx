@@ -9,17 +9,17 @@ import { MapView } from "./components/views/MapView";
 import { NetworkView } from "./components/views/NetworkView";
 import { TimelineView } from "./components/views/TimelineView";
 import { useBattleData } from "./hooks/useBattleData";
+import { getVisibleSelectedEvent } from "./lib/appState";
 import {
   filterBattles,
   getBattleYearRange,
   getClosestBattleYear,
-  getSelectedBattle,
   summarizeBattles,
 } from "./lib/battleAnalytics";
 import type { YearRange } from "./types/domain";
 
 export default function App() {
-  const { battles, wars, participants, loading, error } = useBattleData();
+  const { battles, wars, participants, loading, error, retry } = useBattleData();
   const allYearRange = useMemo(() => getBattleYearRange(battles), [battles]);
   const [selectedWarId, setSelectedWarId] = useState<string | null>("all");
   const [selectedYearRange, setSelectedYearRange] = useState<YearRange>(allYearRange);
@@ -72,8 +72,8 @@ export default function App() {
     [currentYear, resultBattles],
   );
   const selectedBattle = useMemo(
-    () => getSelectedBattle(mapBattles, selectedBattleId),
-    [mapBattles, selectedBattleId],
+    () => getVisibleSelectedEvent(resultBattles, mapBattles, selectedBattleId),
+    [resultBattles, mapBattles, selectedBattleId],
   );
 
   function syncSelectedBattleAfterScopeChange(nextBattles: typeof battles, nextYear: number, message: string) {
@@ -202,7 +202,14 @@ export default function App() {
   }
 
   if (error) {
-    return <div className="screen-message">冲突事件数据加载失败：{error.message}</div>;
+    return (
+      <div className="screen-message screen-message-stack">
+        <span>冲突事件数据加载失败：{error.message}</span>
+        <button className="icon-text-button" type="button" onClick={retry}>
+          重试
+        </button>
+      </div>
+    );
   }
 
   return (

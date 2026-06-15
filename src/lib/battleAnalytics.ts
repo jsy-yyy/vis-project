@@ -73,3 +73,9 @@ export function getSelectedBattle(battles: Battle[], selectedBattleId: string | 
 
   return battles.find((battle) => battle.id === selectedBattleId) ?? null;
 }
+
+export const getConflictEventYearRange = getBattleYearRange;
+export const getClosestConflictEventYear = getClosestBattleYear;
+export const filterConflictEvents = filterBattles;
+export const summarizeConflictEvents = summarizeBattles;
+export const getSelectedConflictEvent = getSelectedBattle;

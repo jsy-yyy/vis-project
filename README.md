@@ -23,9 +23,11 @@
   - 按 conflict group 筛选。
   - 按年份范围筛选。
   - 按参战方筛选。
+  - conflict group 和 participant 下拉支持本地搜索。
 - Leaflet 地图：HCED 事件点叠加 CShapes 2.0 历史边界快照。
 - 时间轴视图、参战方网络视图、统计面板、详情面板和 case study 快捷筛选。
-- 筛选与统计核心逻辑测试。
+- 数据加载失败时提供错误提示和重试入口。
+- 筛选、统计和状态联动核心逻辑测试。
 
 ## 快速开始
 
@@ -132,6 +134,7 @@ useBattleData(): {
   participants: Participant[];
   loading: boolean;
   error: Error | null;
+  retry: () => void;
 };
 ```
 
@@ -152,6 +155,8 @@ useBattleData(): {
 - `type` = `event_type`
 - `description` = `narrative`
 - `source` = `source`
+
+`Battle`、`BattleFilters` 和 `BattleSummary` 当前保留为兼容别名；类型层已增加 `ConflictEvent`、`ConflictEventFilters` 和 `ConflictEventSummary`，analytics 层也提供 conflict event 命名的导出，后续可逐步替换组件与文件名。
 
 Actor 清洗由两张人工表驱动：
 
