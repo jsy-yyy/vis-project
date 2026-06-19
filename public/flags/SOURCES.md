@@ -24,3 +24,26 @@ each linked Commons description page.
 | `united-kingdom.svg` | [Flag of the United Kingdom (3-5)](https://commons.wikimedia.org/wiki/File:Flag_of_the_United_Kingdom_(3-5).svg) |
 | `united-states.svg` | [Flag of the United States](https://commons.wikimedia.org/wiki/File:Flag_of_the_United_States.svg) |
 | `ussr.svg` | [Flag of the Soviet Union](https://commons.wikimedia.org/wiki/File:Flag_of_the_Soviet_Union.svg) |
+
+## Extended coverage
+
+Modern country flags are provided by
+[`flag-icons` 7.5.0](https://github.com/lipis/flag-icons), an MIT-licensed SVG
+collection. Only the country assets referenced by `src/styles.css` are bundled
+by Vite.
+
+The following small local SVGs reproduce historical flag layouts for actors
+that do not have a current ISO country code:
+
+| Local file | Reference |
+| --- | --- |
+| `free-france.svg` | [Flag of Free France](https://commons.wikimedia.org/wiki/Category:Flags_of_Free_France) |
+| `orange-free-state.svg` | [Flags of the Orange Free State](https://commons.wikimedia.org/wiki/Category:Flags_of_the_Orange_Free_State) |
+| `south-vietnam.svg` | [Flag of South Vietnam](https://commons.wikimedia.org/wiki/Category:Flags_of_South_Vietnam) |
+| `transvaal.svg` | [Flags of the South African Republic](https://commons.wikimedia.org/wiki/Category:Flags_of_the_South_African_Republic) |
+| `yugoslavia-kingdom.svg` | [Flags of the Kingdom of Yugoslavia](https://commons.wikimedia.org/wiki/Category:Flags_of_the_Kingdom_of_Yugoslavia) |
+| `yugoslavia-socialist.svg` | [Flags of socialist Yugoslavia](https://commons.wikimedia.org/wiki/Category:Flags_of_Socialist_Federal_Republic_of_Yugoslavia) |
+
+Actors whose historical identity is ambiguous in the dataset, including
+`Tibet`, `Somaliland`, and post-1945 generic `Korea`, intentionally retain the
+text fallback rather than being assigned a potentially misleading flag.

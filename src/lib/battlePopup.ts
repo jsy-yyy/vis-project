@@ -9,7 +9,8 @@ export type PopupSide = {
 
 export type FlagAsset = {
   id: string;
-  src: string;
+  src?: string;
+  isoCode?: string;
   label: string;
 };
 
@@ -48,7 +49,29 @@ const flagAssets = {
   uk: { id: "united-kingdom", src: "/flags/united-kingdom.svg", label: "United Kingdom flag" },
   usa: { id: "united-states", src: "/flags/united-states.svg", label: "United States flag" },
   ussr: { id: "ussr", src: "/flags/ussr.svg", label: "Soviet Union flag" },
+  freeFrance: { id: "free-france", src: "/flags/free-france.svg", label: "Free France flag" },
+  orangeFreeState: {
+    id: "orange-free-state",
+    src: "/flags/orange-free-state.svg",
+    label: "Orange Free State flag",
+  },
+  southVietnam: { id: "south-vietnam", src: "/flags/south-vietnam.svg", label: "South Vietnam flag" },
+  transvaal: { id: "transvaal", src: "/flags/transvaal.svg", label: "South African Republic flag" },
+  yugoslaviaKingdom: {
+    id: "yugoslavia-kingdom",
+    src: "/flags/yugoslavia-kingdom.svg",
+    label: "Kingdom of Yugoslavia flag",
+  },
+  yugoslaviaSocialist: {
+    id: "yugoslavia-socialist",
+    src: "/flags/yugoslavia-socialist.svg",
+    label: "Socialist Yugoslavia flag",
+  },
 } satisfies Record<string, FlagAsset>;
+
+function createIsoFlag(id: string, isoCode: string, label: string): FlagAsset {
+  return { id, isoCode, label };
+}
 
 const flagRules: FlagRule[] = [
   { keys: ["austria hungary", "austro hungarian"], from: 1867, to: 1918, flag: flagAssets.austriaHungary },
@@ -69,6 +92,71 @@ const flagRules: FlagRule[] = [
   { keys: ["russia", "russian", "russians"], from: 1991, flag: flagAssets.russia },
   { keys: ["united kingdom", "british", "britain"], flag: flagAssets.uk },
   { keys: ["united states", "united states of america", "america", "american", "americans", "usa"], flag: flagAssets.usa },
+  { keys: ["free france"], from: 1940, to: 1944, flag: flagAssets.freeFrance },
+  { keys: ["vichy france"], from: 1940, to: 1944, flag: flagAssets.france },
+  { keys: ["transvaal"], from: 1852, to: 1902, flag: flagAssets.transvaal },
+  { keys: ["orange free state"], from: 1854, to: 1902, flag: flagAssets.orangeFreeState },
+  { keys: ["north vietnam"], from: 1945, to: 1976, flag: createIsoFlag("north-vietnam", "vn", "North Vietnam flag") },
+  { keys: ["south vietnam"], from: 1948, to: 1975, flag: flagAssets.southVietnam },
+  { keys: ["yugoslavia"], to: 1945, flag: flagAssets.yugoslaviaKingdom },
+  { keys: ["yugoslavia"], from: 1946, to: 1992, flag: flagAssets.yugoslaviaSocialist },
+  { keys: ["czechoslovakia"], from: 1918, to: 1992, flag: createIsoFlag("czechoslovakia", "cz", "Czechoslovakia flag") },
+  { keys: ["korea"], to: 1945, flag: createIsoFlag("korea", "kr", "Korean flag") },
+  { keys: ["afghanistan"], flag: createIsoFlag("afghanistan", "af", "Afghanistan flag") },
+  { keys: ["algeria"], flag: createIsoFlag("algeria", "dz", "Algeria flag") },
+  { keys: ["argentina"], flag: createIsoFlag("argentina", "ar", "Argentina flag") },
+  { keys: ["australia"], flag: createIsoFlag("australia", "au", "Australia flag") },
+  { keys: ["austria"], flag: createIsoFlag("austria", "at", "Austria flag") },
+  { keys: ["belgium"], flag: createIsoFlag("belgium", "be", "Belgium flag") },
+  { keys: ["benin"], flag: createIsoFlag("benin", "bj", "Benin flag") },
+  { keys: ["bolivia"], flag: createIsoFlag("bolivia", "bo", "Bolivia flag") },
+  { keys: ["bulgaria"], flag: createIsoFlag("bulgaria", "bg", "Bulgaria flag") },
+  { keys: ["canada"], flag: createIsoFlag("canada", "ca", "Canada flag") },
+  { keys: ["chad"], flag: createIsoFlag("chad", "td", "Chad flag") },
+  { keys: ["croatia"], flag: createIsoFlag("croatia", "hr", "Croatia flag") },
+  { keys: ["cuba"], flag: createIsoFlag("cuba", "cu", "Cuba flag") },
+  { keys: ["egypt"], flag: createIsoFlag("egypt", "eg", "Egypt flag") },
+  { keys: ["eritrea"], flag: createIsoFlag("eritrea", "er", "Eritrea flag") },
+  { keys: ["estonia"], flag: createIsoFlag("estonia", "ee", "Estonia flag") },
+  { keys: ["ethiopia"], flag: createIsoFlag("ethiopia", "et", "Ethiopia flag") },
+  { keys: ["finland"], flag: createIsoFlag("finland", "fi", "Finland flag") },
+  { keys: ["greece"], flag: createIsoFlag("greece", "gr", "Greece flag") },
+  { keys: ["honduras"], flag: createIsoFlag("honduras", "hn", "Honduras flag") },
+  { keys: ["hungary"], flag: createIsoFlag("hungary", "hu", "Hungary flag") },
+  { keys: ["india"], flag: createIsoFlag("india", "in", "India flag") },
+  { keys: ["indonesia"], flag: createIsoFlag("indonesia", "id", "Indonesia flag") },
+  { keys: ["iran"], flag: createIsoFlag("iran", "ir", "Iran flag") },
+  { keys: ["iraq"], flag: createIsoFlag("iraq", "iq", "Iraq flag") },
+  { keys: ["ireland", "irish free state"], flag: createIsoFlag("ireland", "ie", "Ireland flag") },
+  { keys: ["israel"], flag: createIsoFlag("israel", "il", "Israel flag") },
+  { keys: ["jordan", "arab legion"], flag: createIsoFlag("jordan", "jo", "Jordan flag") },
+  { keys: ["lebanon"], flag: createIsoFlag("lebanon", "lb", "Lebanon flag") },
+  { keys: ["libya"], flag: createIsoFlag("libya", "ly", "Libya flag") },
+  { keys: ["madagascar"], flag: createIsoFlag("madagascar", "mg", "Madagascar flag") },
+  { keys: ["mexico"], flag: createIsoFlag("mexico", "mx", "Mexico flag") },
+  { keys: ["morocco"], flag: createIsoFlag("morocco", "ma", "Morocco flag") },
+  { keys: ["netherlands"], flag: createIsoFlag("netherlands", "nl", "Netherlands flag") },
+  { keys: ["new zealand"], flag: createIsoFlag("new-zealand", "nz", "New Zealand flag") },
+  { keys: ["nicaragua"], flag: createIsoFlag("nicaragua", "ni", "Nicaragua flag") },
+  { keys: ["nigeria"], flag: createIsoFlag("nigeria", "ng", "Nigeria flag") },
+  { keys: ["north korea"], from: 1948, flag: createIsoFlag("north-korea", "kp", "North Korea flag") },
+  { keys: ["norway"], flag: createIsoFlag("norway", "no", "Norway flag") },
+  { keys: ["pakistan"], flag: createIsoFlag("pakistan", "pk", "Pakistan flag") },
+  { keys: ["paraguay"], flag: createIsoFlag("paraguay", "py", "Paraguay flag") },
+  { keys: ["philippines"], flag: createIsoFlag("philippines", "ph", "Philippines flag") },
+  { keys: ["poland"], flag: createIsoFlag("poland", "pl", "Poland flag") },
+  { keys: ["portugal"], flag: createIsoFlag("portugal", "pt", "Portugal flag") },
+  { keys: ["romania", "rumania"], flag: createIsoFlag("romania", "ro", "Romania flag") },
+  { keys: ["saudi arabia"], flag: createIsoFlag("saudi-arabia", "sa", "Saudi Arabia flag") },
+  { keys: ["serbia"], flag: createIsoFlag("serbia", "rs", "Serbia flag") },
+  { keys: ["somalia"], flag: createIsoFlag("somalia", "so", "Somalia flag") },
+  { keys: ["south africa"], flag: createIsoFlag("south-africa", "za", "South Africa flag") },
+  { keys: ["south korea"], from: 1948, flag: createIsoFlag("south-korea", "kr", "South Korea flag") },
+  { keys: ["spain"], flag: createIsoFlag("spain", "es", "Spain flag") },
+  { keys: ["sudan"], flag: createIsoFlag("sudan", "sd", "Sudan flag") },
+  { keys: ["syria"], flag: createIsoFlag("syria", "sy", "Syria flag") },
+  { keys: ["tunisia"], flag: createIsoFlag("tunisia", "tn", "Tunisia flag") },
+  { keys: ["vietnam"], from: 1976, flag: createIsoFlag("vietnam", "vn", "Vietnam flag") },
 ];
 
 export function escapeHtml(value: string | number) {
@@ -105,6 +193,27 @@ export function resolveHistoricalFlag(name: string, year: number): FlagAsset | n
     (item) => isYearInRule(year, item) && keys.some((key) => item.keys.includes(key)),
   );
   return rule?.flag ?? null;
+}
+
+export function resolveDominantHistoricalFlag(name: string, years: number[]): FlagAsset | null {
+  const candidates = new Map<string, { flag: FlagAsset; count: number; latestYear: number }>();
+
+  for (const year of years) {
+    const flag = resolveHistoricalFlag(name, year);
+    if (!flag) {
+      continue;
+    }
+
+    const current = candidates.get(flag.id);
+    candidates.set(flag.id, {
+      flag,
+      count: (current?.count ?? 0) + 1,
+      latestYear: Math.max(current?.latestYear ?? year, year),
+    });
+  }
+
+  return Array.from(candidates.values())
+    .sort((left, right) => right.count - left.count || right.latestYear - left.latestYear)[0]?.flag ?? null;
 }
 
 function getSideActor(battle: Battle, role: "winner" | "loser") {
@@ -169,7 +278,9 @@ export function getBattlePopupModel(battle: Battle): BattlePopupModel {
 
 function getSideHtml(side: PopupSide, label: string) {
   const visual = side.flag
-    ? `<img class="battle-popup-flag" src="${escapeHtml(side.flag.src)}" alt="${escapeHtml(side.flag.label)}" />`
+    ? side.flag.src
+      ? `<img class="battle-popup-flag" src="${escapeHtml(side.flag.src)}" alt="${escapeHtml(side.flag.label)}" />`
+      : `<span class="battle-popup-flag country-flag flag-iso-${escapeHtml(side.flag.isoCode ?? "")}" role="img" aria-label="${escapeHtml(side.flag.label)}"></span>`
     : `<span class="battle-popup-flag-fallback" aria-hidden="true">${escapeHtml(side.fallbackCode)}</span>`;
 
   return `

@@ -4,6 +4,7 @@ import {
   escapeHtml,
   getBattlePopupHtml,
   getBattlePopupModel,
+  resolveDominantHistoricalFlag,
   resolveHistoricalFlag,
 } from "./battlePopup";
 
@@ -72,6 +73,19 @@ describe("battle popup model", () => {
     expect(resolveHistoricalFlag("Germany", 1914)?.id).toBe("germany-empire");
     expect(resolveHistoricalFlag("Germany", 1941)).toBeNull();
     expect(resolveHistoricalFlag("Germany", 1950)?.id).toBe("germany-modern");
+    expect(resolveHistoricalFlag("Spain", 1930)).toMatchObject({ id: "spain", isoCode: "es" });
+    expect(resolveHistoricalFlag("Transvaal", 1900)?.id).toBe("transvaal");
+    expect(resolveHistoricalFlag("Orange Free State", 1900)?.id).toBe("orange-free-state");
+    expect(resolveHistoricalFlag("North Vietnam", 1968)).toMatchObject({ id: "north-vietnam", isoCode: "vn" });
+    expect(resolveHistoricalFlag("South Vietnam", 1968)?.id).toBe("south-vietnam");
+  });
+
+  it("chooses the most common historical flag in a filtered participant range", () => {
+    expect(resolveDominantHistoricalFlag("Yugoslavia", [1941, 1942, 1946, 1960, 1991])?.id)
+      .toBe("yugoslavia-socialist");
+    expect(resolveDominantHistoricalFlag("Germany", [1914, 1916, 1941])?.id)
+      .toBe("germany-empire");
+    expect(resolveDominantHistoricalFlag("Tibet", [1904])).toBeNull();
   });
 
   it("uses actor names for flag lookup even when display names use map targets", () => {

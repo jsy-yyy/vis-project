@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 import { Grid3X3, Maximize2, RotateCcw, Share2, Waypoints, ZoomIn, ZoomOut } from "lucide-react";
+import { resolveDominantHistoricalFlag } from "../../lib/battlePopup";
 import { buildParticipantNetwork } from "../../lib/networkAnalytics";
 import type {
   ParticipantNetworkEdge,
@@ -428,6 +429,19 @@ export function NetworkView({
     [network.nodes],
   );
   const nodeLookup = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
+  const participantFlags = useMemo(
+    () =>
+      new Map(
+        network.nodes.map((node) => {
+          const participantName = getParticipantName(node.id, participantNames);
+          const participantYears = battles
+            .filter((battle) => battle.participants.includes(node.id))
+            .map((battle) => battle.year);
+          return [node.id, resolveDominantHistoricalFlag(participantName, participantYears)] as const;
+        }),
+      ),
+    [battles, network.nodes, participantNames],
+  );
   const edges = network.edges.slice(0, maxVisibleEdges);
   const maxEdgeWeight = Math.max(1, ...edges.map((edge) => edge.weight));
   const selectionVisible = selectedParticipant ? nodeLookup.has(selectedParticipant) : false;
@@ -735,6 +749,7 @@ export function NetworkView({
                   {nodes.map((node, index) => {
                     const selected = node.id === selectedParticipant;
                     const participantName = getParticipantName(node.id, participantNames);
+                    const participantFlag = participantFlags.get(node.id);
                     const muted = selectionVisible && !focusedNodeIds.has(node.id);
                     const inspected =
                       inspectedEdge && (inspectedEdge.source === node.id || inspectedEdge.target === node.id);
@@ -786,7 +801,42 @@ export function NetworkView({
                             胜方 {node.winnerCount} / 败方 {node.loserCount} / 未判定 {node.neutralCount}。
                           </title>
                         </circle>
-                        <text className="network-node-count" x={node.x} y={node.y + 4} textAnchor="middle">
+                        {participantFlag ? (
+                          <foreignObject
+                            className="network-node-flag"
+                            x={node.x - node.radius + 4}
+                            y={node.y - node.radius + 4}
+                            width={Math.max(1, node.radius * 2 - 8)}
+                            height={Math.max(1, node.radius * 2 - 8)}
+                          >
+                            <div className="network-node-flag-shell">
+                              {participantFlag.src ? (
+                                <img src={participantFlag.src} alt="" />
+                              ) : (
+                                <span
+                                  className={`country-flag flag-iso-${participantFlag.isoCode ?? ""}`}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </div>
+                          </foreignObject>
+                        ) : null}
+                        {participantFlag ? (
+                          <rect
+                            className="network-node-count-badge"
+                            x={node.x - Math.max(11, String(node.eventCount).length * 4 + 4)}
+                            y={node.y + node.radius * 0.22}
+                            width={Math.max(22, String(node.eventCount).length * 8 + 8)}
+                            height={14}
+                            rx={7}
+                          />
+                        ) : null}
+                        <text
+                          className={participantFlag ? "network-node-count with-flag" : "network-node-count"}
+                          x={node.x}
+                          y={participantFlag ? node.y + node.radius * 0.22 + 10 : node.y + 4}
+                          textAnchor="middle"
+                        >
                           {node.eventCount}
                         </text>
                         {showLabel ? (

@@ -601,6 +601,70 @@ h1 {
   background: rgba(255, 255, 255, 0.88);
 }
 
+.country-flag {
+  display: inline-block;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.flag-iso-af { background-image: url("../node_modules/flag-icons/flags/4x3/af.svg"); }
+.flag-iso-ar { background-image: url("../node_modules/flag-icons/flags/4x3/ar.svg"); }
+.flag-iso-at { background-image: url("../node_modules/flag-icons/flags/4x3/at.svg"); }
+.flag-iso-au { background-image: url("../node_modules/flag-icons/flags/4x3/au.svg"); }
+.flag-iso-be { background-image: url("../node_modules/flag-icons/flags/4x3/be.svg"); }
+.flag-iso-bg { background-image: url("../node_modules/flag-icons/flags/4x3/bg.svg"); }
+.flag-iso-bj { background-image: url("../node_modules/flag-icons/flags/4x3/bj.svg"); }
+.flag-iso-bo { background-image: url("../node_modules/flag-icons/flags/4x3/bo.svg"); }
+.flag-iso-ca { background-image: url("../node_modules/flag-icons/flags/4x3/ca.svg"); }
+.flag-iso-cu { background-image: url("../node_modules/flag-icons/flags/4x3/cu.svg"); }
+.flag-iso-cz { background-image: url("../node_modules/flag-icons/flags/4x3/cz.svg"); }
+.flag-iso-dz { background-image: url("../node_modules/flag-icons/flags/4x3/dz.svg"); }
+.flag-iso-ee { background-image: url("../node_modules/flag-icons/flags/4x3/ee.svg"); }
+.flag-iso-eg { background-image: url("../node_modules/flag-icons/flags/4x3/eg.svg"); }
+.flag-iso-er { background-image: url("../node_modules/flag-icons/flags/4x3/er.svg"); }
+.flag-iso-es { background-image: url("../node_modules/flag-icons/flags/4x3/es.svg"); }
+.flag-iso-et { background-image: url("../node_modules/flag-icons/flags/4x3/et.svg"); }
+.flag-iso-fi { background-image: url("../node_modules/flag-icons/flags/4x3/fi.svg"); }
+.flag-iso-gr { background-image: url("../node_modules/flag-icons/flags/4x3/gr.svg"); }
+.flag-iso-hn { background-image: url("../node_modules/flag-icons/flags/4x3/hn.svg"); }
+.flag-iso-hr { background-image: url("../node_modules/flag-icons/flags/4x3/hr.svg"); }
+.flag-iso-hu { background-image: url("../node_modules/flag-icons/flags/4x3/hu.svg"); }
+.flag-iso-id { background-image: url("../node_modules/flag-icons/flags/4x3/id.svg"); }
+.flag-iso-ie { background-image: url("../node_modules/flag-icons/flags/4x3/ie.svg"); }
+.flag-iso-il { background-image: url("../node_modules/flag-icons/flags/4x3/il.svg"); }
+.flag-iso-in { background-image: url("../node_modules/flag-icons/flags/4x3/in.svg"); }
+.flag-iso-iq { background-image: url("../node_modules/flag-icons/flags/4x3/iq.svg"); }
+.flag-iso-ir { background-image: url("../node_modules/flag-icons/flags/4x3/ir.svg"); }
+.flag-iso-jo { background-image: url("../node_modules/flag-icons/flags/4x3/jo.svg"); }
+.flag-iso-kp { background-image: url("../node_modules/flag-icons/flags/4x3/kp.svg"); }
+.flag-iso-kr { background-image: url("../node_modules/flag-icons/flags/4x3/kr.svg"); }
+.flag-iso-lb { background-image: url("../node_modules/flag-icons/flags/4x3/lb.svg"); }
+.flag-iso-ly { background-image: url("../node_modules/flag-icons/flags/4x3/ly.svg"); }
+.flag-iso-ma { background-image: url("../node_modules/flag-icons/flags/4x3/ma.svg"); }
+.flag-iso-mg { background-image: url("../node_modules/flag-icons/flags/4x3/mg.svg"); }
+.flag-iso-mx { background-image: url("../node_modules/flag-icons/flags/4x3/mx.svg"); }
+.flag-iso-ng { background-image: url("../node_modules/flag-icons/flags/4x3/ng.svg"); }
+.flag-iso-ni { background-image: url("../node_modules/flag-icons/flags/4x3/ni.svg"); }
+.flag-iso-nl { background-image: url("../node_modules/flag-icons/flags/4x3/nl.svg"); }
+.flag-iso-no { background-image: url("../node_modules/flag-icons/flags/4x3/no.svg"); }
+.flag-iso-nz { background-image: url("../node_modules/flag-icons/flags/4x3/nz.svg"); }
+.flag-iso-ph { background-image: url("../node_modules/flag-icons/flags/4x3/ph.svg"); }
+.flag-iso-pk { background-image: url("../node_modules/flag-icons/flags/4x3/pk.svg"); }
+.flag-iso-pl { background-image: url("../node_modules/flag-icons/flags/4x3/pl.svg"); }
+.flag-iso-pt { background-image: url("../node_modules/flag-icons/flags/4x3/pt.svg"); }
+.flag-iso-py { background-image: url("../node_modules/flag-icons/flags/4x3/py.svg"); }
+.flag-iso-ro { background-image: url("../node_modules/flag-icons/flags/4x3/ro.svg"); }
+.flag-iso-rs { background-image: url("../node_modules/flag-icons/flags/4x3/rs.svg"); }
+.flag-iso-sa { background-image: url("../node_modules/flag-icons/flags/4x3/sa.svg"); }
+.flag-iso-sd { background-image: url("../node_modules/flag-icons/flags/4x3/sd.svg"); }
+.flag-iso-so { background-image: url("../node_modules/flag-icons/flags/4x3/so.svg"); }
+.flag-iso-sy { background-image: url("../node_modules/flag-icons/flags/4x3/sy.svg"); }
+.flag-iso-td { background-image: url("../node_modules/flag-icons/flags/4x3/td.svg"); }
+.flag-iso-tn { background-image: url("../node_modules/flag-icons/flags/4x3/tn.svg"); }
+.flag-iso-vn { background-image: url("../node_modules/flag-icons/flags/4x3/vn.svg"); }
+.flag-iso-za { background-image: url("../node_modules/flag-icons/flags/4x3/za.svg"); }
+
 .battle-popup-flag-fallback {
   display: grid;
   place-items: center;
@@ -1853,6 +1917,37 @@ g:focus-visible .participant-heatmap-rect {
   stroke-width: 4;
 }
 
+.network-node-flag {
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.network-node-flag-shell,
+.network-node-flag-shell img,
+.network-node-flag-shell .country-flag {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.network-node-flag-shell {
+  overflow: hidden;
+  border-radius: 50%;
+  background: rgba(11, 15, 18, 0.84);
+}
+
+.network-node-flag-shell img {
+  object-fit: cover;
+}
+
+.network-node-count-badge {
+  fill: rgba(11, 15, 18, 0.88);
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
 .list-link:focus-visible,
 .timeline-item:focus-visible,
 .timeline-bar:focus-visible,
@@ -1872,6 +1967,11 @@ g:focus-visible .participant-heatmap-rect {
 
 .network-node-count {
   font-size: 0.72rem;
+}
+
+.network-node-count.with-flag {
+  fill: #fff;
+  font-size: 0.62rem;
 }
 
 .network-node-label {
