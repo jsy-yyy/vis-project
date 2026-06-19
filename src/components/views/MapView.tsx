@@ -32,11 +32,6 @@ type MapViewProps = {
   onResetFilters: () => void;
 };
 
-type SnapshotOption = {
-  value: string;
-  label: string;
-};
-
 type CShapesBoundaryProperties = {
   snapshot_date: string;
   snapshot_year: number;
@@ -204,11 +199,6 @@ const cshapesSnapshots = [
   { date: "1991-12-25", year: 1991, label: "1991" },
   { date: "2000-07-01", year: 2000, label: "2000" },
   { date: "2003-07-01", year: 2003, label: "2003" },
-];
-
-const cshapesSnapshotOptions: SnapshotOption[] = [
-  { value: "auto", label: "自动选择当前年前最近快照" },
-  ...cshapesSnapshots.map((snapshot) => ({ value: snapshot.date, label: snapshot.label })),
 ];
 
 function normalizeCountryKey(value: string) {
@@ -584,7 +574,9 @@ export function MapView({
   const markerRefs = useRef<Map<string, L.CircleMarker>>(new Map());
   const lastAutoFocusedBattleIdRef = useRef<string | null>(null);
   const pendingPopupBattleIdRef = useRef<string | null>(null);
-  const [selectedSnapshot, setSelectedSnapshot] = useState("auto");
+  const openPopupBattleIdRef = useRef<string | null>(null);
+  const rebuildingBattleLayerRef = useRef(false);
+  const battleClickTimerRef = useRef<number | null>(null);
   const [selectedCountryName, setSelectedCountryName] = useState<string | null>(null);
   const [landCollection, setLandCollection] = useState<LandCollection | null>(null);
   const [boundaryCollection, setBoundaryCollection] = useState<CShapesBoundaryCollection | null>(null);
@@ -619,8 +611,7 @@ export function MapView({
   const snapshotReferenceYear = analysisMode === "range" ? activeYearRange[1] : currentYear;
   const activeYearLabel =
     analysisMode === "range" ? `${activeYearRange[0]}–${activeYearRange[1]}` : String(currentYear);
-  const effectiveSnapshot =
-    selectedSnapshot === "auto" ? getSnapshotForYear(snapshotReferenceYear).date : selectedSnapshot;
+  const effectiveSnapshot = getSnapshotForYear(snapshotReferenceYear).date;
   const effectiveSnapshotLabel =
     `密度气泡 + CShapes 快照 ${cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? effectiveSnapshot}`;
   const countryLookup = useMemo(() => {
@@ -703,6 +694,8 @@ export function MapView({
       setPulseBattleId(null);
       lastAutoFocusedBattleIdRef.current = null;
       pendingPopupBattleIdRef.current = null;
+      openPopupBattleIdRef.current = null;
+      mapRef.current?.closePopup();
       return;
     }
 
@@ -824,6 +817,21 @@ export function MapView({
     onSelectBattle(battle.id);
   }
 
+  function handleBattleDoubleClick(battle: Battle, event: L.LeafletMouseEvent) {
+    if (battleClickTimerRef.current !== null) {
+      window.clearTimeout(battleClickTimerRef.current);
+      battleClickTimerRef.current = null;
+    }
+    if (event.originalEvent) {
+      L.DomEvent.stop(event.originalEvent);
+    }
+
+    setSelectedCountryName(null);
+    pendingPopupBattleIdRef.current = battle.id;
+    onSelectBattle(battle.id);
+    markerRefs.current.get(battle.id)?.openPopup();
+  }
+
   function focusBattleMarkerLayer(battle: Battle) {
     const map = mapRef.current;
     lastAutoFocusedBattleIdRef.current = battle.id;
@@ -844,7 +852,9 @@ export function MapView({
     const marker = markerRefs.current.get(battle.id);
     if (marker && getMapLayerMode(targetZoom) === "events") {
       marker.openPopup();
-      pendingPopupBattleIdRef.current = null;
+      if (battle.id === selectedBattleId) {
+        pendingPopupBattleIdRef.current = null;
+      }
     }
   }
 
@@ -970,6 +980,10 @@ export function MapView({
     setMapInstanceVersion((version) => version + 1);
 
     return () => {
+      if (battleClickTimerRef.current !== null) {
+        window.clearTimeout(battleClickTimerRef.current);
+        battleClickTimerRef.current = null;
+      }
       map.off("zoomend", handleZoomEnd);
       landLayerRef.current?.remove();
       boundaryLayerRef.current?.remove();
@@ -1031,10 +1045,11 @@ export function MapView({
       });
 
       heatMarker
-        .bindTooltip(`${activeYearLabel} · ${cell.count} 条事件 · 点击查看该区域事件`)
+        .bindTooltip(`${activeYearLabel} · ${cell.count} 条事件 · 点击气泡下钻到事件点`)
         .on("click", () => handleHeatCellSelect(cell));
 
       heatMarker.addTo(heatLayer);
+      heatMarker.getElement()?.setAttribute("data-event-ids", cell.battleIds.join(" "));
     }
 
     heatLayer.bringToFront();
@@ -1087,10 +1102,14 @@ export function MapView({
       return;
     }
 
+    const popupToRestore = pendingPopupBattleIdRef.current ?? openPopupBattleIdRef.current;
+    rebuildingBattleLayerRef.current = true;
+    mapRef.current?.closePopup();
     battleLayer.clearLayers();
     markerRefs.current.clear();
 
     if (mapLayerMode !== "events") {
+      rebuildingBattleLayerRef.current = false;
       return;
     }
 
@@ -1105,11 +1124,38 @@ export function MapView({
         getBattleStyle(battle, selected, highlighted, battle.id === pulseBattleId),
       )
         .bindPopup(getBattlePopupHtml(battle), { className: "battle-popup-leaflet" })
-        .on("click", () => handleBattleSelect(battle));
+        .on("click", () => {
+          if (battleClickTimerRef.current !== null) {
+            window.clearTimeout(battleClickTimerRef.current);
+          }
+          battleClickTimerRef.current = window.setTimeout(() => {
+            battleClickTimerRef.current = null;
+            handleBattleSelect(battle);
+          }, 220);
+        })
+        .on("dblclick", (event) => handleBattleDoubleClick(battle, event))
+        .on("popupopen", () => {
+          openPopupBattleIdRef.current = battle.id;
+        })
+        .on("popupclose", () => {
+          if (!rebuildingBattleLayerRef.current) {
+            openPopupBattleIdRef.current = null;
+          }
+        });
 
       marker.addTo(battleLayer);
+      const markerElement = marker.getElement();
+      markerElement?.setAttribute("data-event-id", battle.id);
+      markerElement?.setAttribute("aria-label", `事件点：${battle.name}，双击查看对阵详情`);
       markerRefs.current.set(battle.id, marker);
     }
+
+    if (popupToRestore) {
+      markerRefs.current.get(popupToRestore)?.openPopup();
+      openPopupBattleIdRef.current = popupToRestore;
+      pendingPopupBattleIdRef.current = null;
+    }
+    rebuildingBattleLayerRef.current = false;
   }, [
     battles,
     focusedHeatBattleIds,
@@ -1171,36 +1217,12 @@ export function MapView({
             <span>{effectiveSnapshotLabel}</span>
           </div>
           <div className="map-layer-mode" aria-live="polite">
-            {mapLayerMode === "heat" ? "聚合气泡模式" : "事件点模式"}
+            {mapLayerMode === "heat"
+              ? "聚合气泡模式 · 点击气泡下钻到事件点"
+              : "事件点模式 · 点击事件点查看详情"}
           </div>
-          <div className="boundary-control">
-            <label>
-              <span>CShapes 2.0 历史边界快照</span>
-              <select
-                value={selectedSnapshot}
-                onChange={(event) => setSelectedSnapshot(event.target.value)}
-              >
-                {cshapesSnapshotOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <small>
-              当前显示：{effectiveSnapshotLabel}
-            </small>
-          </div>
-          <div className="map-legend" aria-label="冲突事件类型颜色图例">
-            {mapLayerMode === "heat" ? (
-              <div>
-                <span style={{ "--legend-color": "#ff8066" } as React.CSSProperties} />
-                <strong>
-                  气泡越大、颜色越亮，{analysisMode === "range" ? "当前年份范围" : "当前年份"}事件越集中
-                </strong>
-              </div>
-            ) : null}
-            {mapLayerMode === "events" ? (
+          {mapLayerMode === "events" ? (
+            <div className="map-legend" aria-label="冲突事件类型颜色图例">
               <>
                 {activeCountryHighlight.internalConflict.size > 0 ? (
                   <div>
@@ -1227,8 +1249,8 @@ export function MapView({
                   </div>
                 ))}
               </>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
         <div className="map-list">
           {focusedHeatCell ? (
