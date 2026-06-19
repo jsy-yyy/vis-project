@@ -57,8 +57,8 @@ test("links year selection and brushing to map state and URL", async ({ page }) 
   await expect(page).toHaveURL(/end=1945/);
   await expect(page).toHaveURL(/mode=multi/);
   await expect(page.getByText("年份窗口", { exact: false }).first()).toContainText("1939–1945");
-  await expect(page.getByLabel("拖动选择起始年份")).toHaveValue("1939");
-  await expect(page.getByLabel("拖动选择结束年份")).toHaveValue("1945");
+  await expect(page.getByLabel("拖动选择起始年份")).toHaveAttribute("aria-valuenow", "1939");
+  await expect(page.getByLabel("拖动选择结束年份")).toHaveAttribute("aria-valuenow", "1945");
 });
 
 test("restores legacy ranges as multi-year analysis and switches back to a single year", async ({ page }) => {
@@ -69,13 +69,8 @@ test("restores legacy ranges as multi-year analysis and switches back to a singl
   await expect(page).toHaveURL(/mode=multi/);
 
   const rangeEnd = page.getByLabel("拖动选择结束年份");
-  await rangeEnd.evaluate((element) => {
-    const input = element as HTMLInputElement;
-    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-    setValue?.call(input, "1902");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await rangeEnd.press("ArrowRight");
+  await rangeEnd.press("ArrowRight");
 
   await expect(page.getByLabel("拉条年份范围")).toHaveText("1900–1902");
   await expect(page).toHaveURL(/start=1900/);
@@ -108,11 +103,10 @@ test("selects a participant from the network combobox and restores shared state"
 });
 
 test("applies the World War II case study with dynamic insight metrics", async ({ page }) => {
-  const caseCard = page.locator(".case-study-card.primary");
-  await expect(caseCard).toContainText("450");
-  await expect(caseCard).toContainText("1944");
-  await expect(caseCard).toContainText("124");
-  const applyCaseButton = caseCard.getByRole("button", { name: /应用窗口并定位峰值/ });
+  const casePreset = page.locator(".timeline-case-presets");
+  await expect(casePreset).toContainText("1944");
+  await expect(casePreset).toContainText("124 条事件");
+  const applyCaseButton = casePreset.getByRole("button", { name: "应用窗口" });
   await applyCaseButton.scrollIntoViewIfNeeded();
   await applyCaseButton.click({ force: true });
 
@@ -121,6 +115,83 @@ test("applies the World War II case study with dynamic insight metrics", async (
   await expect(page).toHaveURL(/mode=multi/);
   await expect(page).toHaveURL(/start=1939/);
   await expect(page).toHaveURL(/end=1945/);
+});
+
+test("lets an overlapping range expand in either direction", async ({ page }) => {
+  await page.locator('.timeline-overview-bar[data-year="1944"]').click();
+  await analysisModeButton(page, "多年度分析").click();
+
+  const startHandle = page.getByLabel("拖动选择起始年份");
+  const endHandle = page.getByLabel("拖动选择结束年份");
+  await expect(startHandle).toHaveAttribute("aria-valuenow", "1944");
+  await expect(endHandle).toHaveAttribute("aria-valuenow", "1944");
+
+  await startHandle.press("ArrowLeft");
+  await expect(startHandle).toHaveAttribute("aria-valuenow", "1943");
+  await endHandle.press("ArrowRight");
+  await expect(endHandle).toHaveAttribute("aria-valuenow", "1945");
+});
+
+test("drills from a multi-year heat bubble into event details", async ({ page }) => {
+  await page.goto("/?mode=multi&year=1944&start=1939&end=1945#map-view");
+  await expect(page.locator(".map-layer-mode")).toContainText("点击气泡下钻到事件点");
+  await expect(page.locator(".boundary-control")).toHaveCount(0);
+  await expect(page.locator(".map-legend")).toHaveCount(0);
+  await expect(page.locator(".map-year-feedback")).toContainText("CShapes 快照");
+
+  await page.locator(".density-bubble").first().click({ force: true });
+  await expect(page.locator(".map-layer-mode")).toContainText("点击事件点查看详情");
+  await expect(page.locator(".battle-marker").first()).toBeAttached();
+
+  const visibleMarkerIndex = await page.locator(".battle-marker").evaluateAll((markers) =>
+    markers.findIndex((marker) => {
+      const box = marker.getBoundingClientRect();
+      return box.width > 0 && box.height > 0 && box.left >= 0 && box.top >= 0;
+    }),
+  );
+  expect(visibleMarkerIndex).toBeGreaterThanOrEqual(0);
+  await page.locator(".battle-marker").nth(visibleMarkerIndex).dispatchEvent("click");
+
+  await expect(page).toHaveURL(/event=/);
+  await expect(page.locator(".detail-panel h3")).not.toBeEmpty();
+  await expect(page.locator(".network-svg-node.event-highlighted").first()).toBeAttached();
+});
+
+test("opens the same flag matchup popup when double-clicking single- and multi-year event points", async ({ page }) => {
+  await page.goto("/?year=1913#map-view");
+  const singleHeatCell = page.locator('.density-bubble[data-event-ids~="Bregalnica1913"]');
+  await expect(singleHeatCell).toHaveCount(1);
+  await singleHeatCell.click({ force: true });
+
+  const singleMarker = page.locator('.battle-marker[data-event-id="Bregalnica1913"]');
+  await expect(singleMarker).toBeVisible();
+  await singleMarker.dblclick({ force: true });
+  const singlePopup = page.locator(".battle-popup-card:visible");
+  await expect(singlePopup).toHaveCount(1);
+  await expect(singlePopup).toBeVisible();
+  await expect(singlePopup).toContainText("VS");
+  await expect(singlePopup.locator('img[src="/flags/iso/rs.svg"]')).toBeVisible();
+  await expect(singlePopup.locator('img[src="/flags/iso/bg.svg"]')).toBeVisible();
+
+  await page.goto("/?mode=multi&year=1944&start=1939&end=1945#map-view");
+  const multiHeatCell = page.locator('.density-bubble[data-event-ids~="Agordat1941"]');
+  await expect(multiHeatCell).toHaveCount(1);
+  await multiHeatCell.click({ force: true });
+
+  const multiMarker = page.locator('.battle-marker[data-event-id="Agordat1941"]');
+  await expect(multiMarker).toBeVisible();
+  await multiMarker.dblclick({ force: true });
+  const multiPopup = page.locator(".battle-popup-card:visible");
+  await expect(multiPopup).toHaveCount(1);
+  await expect(multiPopup).toBeVisible();
+  await expect(page).toHaveURL(/event=Agordat1941/);
+  await expect(multiPopup).toContainText("United Kingdom");
+  await expect(multiPopup).toContainText("Italy");
+  await expect(multiPopup).toContainText("VS");
+  await expect(multiPopup.locator('img[src="/flags/united-kingdom.svg"]')).toBeVisible();
+  await expect(multiPopup.locator('img[src="/flags/italy-kingdom.svg"]')).toBeVisible();
+  await page.waitForTimeout(500);
+  await expect(multiPopup).toBeVisible();
 });
 
 test("expands details on demand and links an event to detail and network highlighting", async ({ page }) => {
@@ -136,6 +207,27 @@ test("expands details on demand and links an event to detail and network highlig
   await expect(page.locator(".network-svg-node.event-highlighted").first()).toBeVisible();
 });
 
+test("renders visual timeline details and keeps analysis panels aligned", async ({ page }) => {
+  await page.getByRole("button", { name: /展开分析/ }).click();
+  await expect(page.locator(".timeline-stacked-bars")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "主要参战方" })).toHaveCount(0);
+  await expect(page.locator(".type-share-bar")).toBeVisible();
+
+  const panels = page.locator(".sidebar-grid > .side-panel");
+  await expect(panels).toHaveCount(2);
+  const firstBox = await panels.nth(0).boundingBox();
+  const secondBox = await panels.nth(1).boundingBox();
+  expect(firstBox).not.toBeNull();
+  expect(secondBox).not.toBeNull();
+
+  if ((await page.viewportSize())!.width > 720) {
+    expect(Math.abs(firstBox!.height - secondBox!.height)).toBeLessThanOrEqual(1);
+  }
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
 test("renders ISO flags in the battle popup instead of blank tiles", async ({ page }) => {
   await page.goto("/?year=1913&event=Bregalnica1913&locked=1#map-view");
 
@@ -144,12 +236,12 @@ test("renders ISO flags in the battle popup instead of blank tiles", async ({ pa
   await expect(serbiaFlag).toBeVisible();
   await expect(bulgariaFlag).toBeVisible();
 
-  for (const flag of [serbiaFlag, bulgariaFlag]) {
-    expect(
-      await flag.evaluate((element) => {
+  expect(
+    await page.locator(".battle-popup-card img.battle-popup-flag").evaluateAll((flags) =>
+      flags.every((element) => {
         const image = element as HTMLImageElement;
         return image.complete && image.naturalWidth > 0;
       }),
-    ).toBe(true);
-  }
+    ),
+  ).toBe(true);
 });
