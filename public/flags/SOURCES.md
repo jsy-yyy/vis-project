@@ -29,8 +29,9 @@ each linked Commons description page.
 
 Modern country flags are provided by
 [`flag-icons` 7.5.0](https://github.com/lipis/flag-icons), an MIT-licensed SVG
-collection. Only the country assets referenced by `src/styles.css` are bundled
-by Vite.
+collection. The country assets used by the resolver are copied into
+`public/flags/iso/` and rendered as local `<img>` resources, so popup and network
+flags do not depend on CSS background-image loading.
 
 The following small local SVGs reproduce historical flag layouts for actors
 that do not have a current ISO country code:

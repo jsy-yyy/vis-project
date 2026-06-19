@@ -24,11 +24,12 @@ import {
   summarizeBattles,
 } from "./lib/battleAnalytics";
 import { buildCaseStudyAnalysis, caseStudyDefinitions } from "./lib/caseStudyAnalytics";
-import type { YearRange } from "./types/domain";
+import type { AnalysisMode, YearRange } from "./types/domain";
 
 export default function App() {
-  const { battles, participants, loading, error, retry } = useBattleData();
+  const { battles, wars, participants, loading, error, retry } = useBattleData();
   const allYearRange = useMemo(() => getBattleYearRange(battles), [battles]);
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("single");
   const [selectedYearRange, setSelectedYearRange] = useState<YearRange>(allYearRange);
   const [currentYear, setCurrentYear] = useState(allYearRange[1]);
   const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
@@ -50,18 +51,21 @@ export default function App() {
       participants.some((participant) => participant.id === sharedState.selectedParticipant)
       ? sharedState.selectedParticipant
       : null;
+    const nextEffectiveRange: YearRange =
+      sharedState.analysisMode === "range" ? nextYearRange : allYearRange;
     const filteredEvents = filterBattles(battles, {
-      selectedYearRange: nextYearRange,
+      selectedYearRange: nextEffectiveRange,
       selectedParticipant: nextParticipant,
     });
     const clampedYear = sharedState.currentYear
-      ? Math.min(Math.max(sharedState.currentYear, nextYearRange[0]), nextYearRange[1])
-      : nextYearRange[1];
+      ? Math.min(Math.max(sharedState.currentYear, nextEffectiveRange[0]), nextEffectiveRange[1])
+      : nextEffectiveRange[1];
     const nextYear = getClosestBattleYear(filteredEvents, clampedYear);
     const selectedEventExists = Boolean(
       sharedState.selectedBattleId && battles.some((battle) => battle.id === sharedState.selectedBattleId),
     );
 
+    setAnalysisMode(sharedState.analysisMode);
     setSelectedYearRange(nextYearRange);
     setSelectedParticipant(nextParticipant);
     setCurrentYear(nextYear);
@@ -70,36 +74,45 @@ export default function App() {
     setStateRestoredFromUrl(true);
   }, [allYearRange, battles, participants, stateRestoredFromUrl]);
 
+  const effectiveYearRange = useMemo<YearRange>(
+    () => (analysisMode === "range" ? selectedYearRange : [currentYear, currentYear]),
+    [analysisMode, currentYear, selectedYearRange],
+  );
   const timeWindowBattles = useMemo(
     () =>
       filterBattles(battles, {
-        selectedYearRange,
+        selectedYearRange: effectiveYearRange,
         selectedParticipant: null,
       }),
-    [battles, selectedYearRange],
+    [battles, effectiveYearRange],
   );
   const scopeBattles = useMemo(
     () =>
       filterBattles(battles, {
-        selectedYearRange,
+        selectedYearRange: effectiveYearRange,
         selectedParticipant: null,
       }),
-    [battles, selectedYearRange],
+    [battles, effectiveYearRange],
   );
   const resultBattles = useMemo(
     () =>
       filterBattles(battles, {
-        selectedYearRange,
+        selectedYearRange: effectiveYearRange,
         selectedParticipant,
       }),
-    [battles, selectedYearRange, selectedParticipant],
+    [battles, effectiveYearRange, selectedParticipant],
+  );
+  const timelineOverviewBattles = useMemo(
+    () =>
+      filterBattles(battles, {
+        selectedYearRange: analysisMode === "range" ? selectedYearRange : allYearRange,
+        selectedParticipant,
+      }),
+    [allYearRange, analysisMode, battles, selectedParticipant, selectedYearRange],
   );
 
   const summary = useMemo(() => summarizeBattles(resultBattles), [resultBattles]);
-  const mapBattles = useMemo(
-    () => resultBattles.filter((battle) => battle.year === currentYear),
-    [currentYear, resultBattles],
-  );
+  const mapBattles = resultBattles;
   const selectedBattle = useMemo(
     () => getSelectedEvent(battles, resultBattles, mapBattles, selectedBattleId, selectedBattleLocked),
     [battles, resultBattles, mapBattles, selectedBattleId, selectedBattleLocked],
@@ -120,6 +133,7 @@ export default function App() {
     }
 
     const nextSearch = buildSharedAppSearch({
+      analysisMode,
       allYearRange,
       currentYear,
       selectedYearRange,
@@ -134,6 +148,7 @@ export default function App() {
     }
   }, [
     allYearRange,
+    analysisMode,
     battles.length,
     currentYear,
     selectedBattleId,
@@ -143,13 +158,13 @@ export default function App() {
     stateRestoredFromUrl,
   ]);
 
-  function syncSelectedBattleAfterScopeChange(nextBattles: typeof battles, nextYear: number, message: string) {
+  function syncSelectedBattleAfterScopeChange(nextBattles: typeof battles, message: string) {
     if (!selectedBattleId) {
       setDetailStatusMessage(null);
       return;
     }
 
-    const stillVisible = nextBattles.some((battle) => battle.id === selectedBattleId && battle.year === nextYear);
+    const stillVisible = nextBattles.some((battle) => battle.id === selectedBattleId);
     if (stillVisible) {
       setDetailStatusMessage(null);
       return;
@@ -175,6 +190,12 @@ export default function App() {
       }
 
       setCurrentYear(nextState.currentYear);
+      if (analysisMode === "range") {
+        setSelectedYearRange((range) => [
+          Math.min(range[0], nextState.currentYear),
+          Math.max(range[1], nextState.currentYear),
+        ]);
+      }
       setSelectedBattleId(nextState.selectedBattleId);
       setSelectedBattleLocked(nextState.selectedBattleLocked);
       setDetailStatusMessage(null);
@@ -188,7 +209,7 @@ export default function App() {
         window.location.hash = options.scrollTo === "details" ? "analysis-view" : "map-view";
       }
     },
-    [battles, selectedBattleLocked],
+    [analysisMode, battles, selectedBattleLocked],
   );
 
   function updateYearRange(range: YearRange) {
@@ -208,20 +229,43 @@ export default function App() {
     setLiveStatusMessage(`年份窗口已更新为 ${range[0]}-${range[1]}，地图年份 ${nextYear}。`);
     syncSelectedBattleAfterScopeChange(
       nextBattles,
-      nextYear,
       "年份范围变化后，原选中事件已不在当前地图范围内，详情已清空。",
     );
   }
 
   function updateCurrentYear(year: number) {
+    const nextRange: YearRange = [year, year];
     setCurrentYear(year);
+    if (analysisMode === "range") {
+      setSelectedYearRange(nextRange);
+    }
     setYearAdjustmentMessage(null);
     setLiveStatusMessage(`地图年份已切换为 ${year}。`);
     syncSelectedBattleAfterScopeChange(
-      resultBattles,
-      year,
+      filterBattles(battles, {
+        selectedYearRange: nextRange,
+        selectedParticipant,
+      }),
       "地图年份切换后，原选中事件已不在当前地图年份中，详情已清空。",
     );
+  }
+
+  function updateAnalysisMode(mode: AnalysisMode) {
+    if (mode === analysisMode) {
+      return;
+    }
+
+    if (mode === "range") {
+      setSelectedYearRange([currentYear, currentYear]);
+      setAnalysisMode("range");
+      setLiveStatusMessage(`已切换为多年度分析，当前范围 ${currentYear}-${currentYear}。`);
+      return;
+    }
+
+    const nextYear = selectedYearRange[1];
+    setAnalysisMode("single");
+    setCurrentYear(nextYear);
+    setLiveStatusMessage(`已切换为单年度分析，地图年份 ${nextYear}。`);
   }
 
   function updateSelectedBattle(battleId: string | null) {
@@ -255,10 +299,12 @@ export default function App() {
       return;
     }
 
-    setSelectedYearRange([
-      Math.min(selectedYearRange[0], selectedBattle.year),
-      Math.max(selectedYearRange[1], selectedBattle.year),
-    ]);
+    if (analysisMode === "range") {
+      setSelectedYearRange([
+        Math.min(selectedYearRange[0], selectedBattle.year),
+        Math.max(selectedYearRange[1], selectedBattle.year),
+      ]);
+    }
     setCurrentYear(selectedBattle.year);
     setDetailStatusMessage(null);
     setLiveStatusMessage(`已跳转到锁定事件年份 ${selectedBattle.year}。`);
@@ -266,6 +312,7 @@ export default function App() {
   }
 
   function resetFilters() {
+    setAnalysisMode("single");
     setSelectedYearRange(allYearRange);
     setSelectedParticipant(null);
     setCurrentYear(allYearRange[1]);
@@ -282,6 +329,7 @@ export default function App() {
       selectedParticipant: null,
     });
 
+    setAnalysisMode("range");
     setSelectedYearRange(range);
     setSelectedParticipant(null);
     setCurrentYear(getClosestBattleYear(nextBattles, preferredYear ?? range[1]));
@@ -298,6 +346,7 @@ export default function App() {
       selectedParticipant: participantId,
     });
 
+    setAnalysisMode("range");
     setSelectedYearRange(range);
     setSelectedParticipant(participantId);
     setCurrentYear(getClosestBattleYear(nextBattles, peakYear));
@@ -311,7 +360,7 @@ export default function App() {
 
   function updateParticipantFilter(participantId: string | null) {
     const nextBattles = filterBattles(battles, {
-      selectedYearRange,
+      selectedYearRange: effectiveYearRange,
       selectedParticipant: participantId,
     });
 
@@ -324,7 +373,6 @@ export default function App() {
     );
     syncSelectedBattleAfterScopeChange(
       nextBattles,
-      nextYear,
       "参战方筛选变化后，原选中事件已不在当前结果中，详情已清空。",
     );
     setLiveStatusMessage(
@@ -386,14 +434,18 @@ export default function App() {
           totalBattles={battles.length}
           filteredBattles={resultBattles.length}
           visibleMapBattles={mapBattles.length}
-          currentYear={currentYear}
+          yearLabel={
+            analysisMode === "range"
+              ? `${selectedYearRange[0]}–${selectedYearRange[1]}`
+              : String(currentYear)
+          }
         />
       }
       primary={
         <>
           <TimelineOverview
             baselineBattles={battles}
-            filteredBattles={resultBattles}
+            filteredBattles={timelineOverviewBattles}
             participants={participants}
             selectedParticipant={selectedParticipant}
             selectedBattle={selectedBattle}
@@ -402,9 +454,11 @@ export default function App() {
               selectedBattleId && selectedBattleLocked && !selectedBattleScopeStatus.inFilteredScope,
             )}
             allYearRange={allYearRange}
+            analysisMode={analysisMode}
             selectedYearRange={selectedYearRange}
             currentYear={currentYear}
             yearAdjustmentMessage={yearAdjustmentMessage}
+            onAnalysisModeChange={updateAnalysisMode}
             onYearRangeChange={updateYearRange}
             onCurrentYearChange={updateCurrentYear}
             onClearParticipant={() => updateParticipantFilter(null)}
@@ -416,6 +470,8 @@ export default function App() {
             battles={mapBattles}
             selectedBattleId={selectedBattleScopeStatus.inMapYear ? selectedBattleId : null}
             currentYear={currentYear}
+            analysisMode={analysisMode}
+            activeYearRange={effectiveYearRange}
             participants={participants}
             onSelectBattle={(battleId) => {
               if (battleId) {
@@ -435,6 +491,7 @@ export default function App() {
             selectedBattleLocked={selectedBattleLocked}
             allYearRange={allYearRange}
             selectedYearRange={selectedYearRange}
+            analysisMode={analysisMode}
             currentYear={currentYear}
             onSelectBattle={(battleId) => {
               if (battleId) {
@@ -447,6 +504,7 @@ export default function App() {
           />
           <NetworkView
             battles={scopeBattles}
+            wars={wars}
             participants={participants}
             selectedParticipant={selectedParticipant}
             highlightedParticipantIds={highlightedParticipantIds}

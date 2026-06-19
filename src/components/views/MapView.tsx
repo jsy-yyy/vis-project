@@ -19,12 +19,14 @@ import {
   shouldAutoFocusBattleSelection,
   shouldClearHeatCellFocus,
 } from "../../lib/mapHeat";
-import type { Battle, Participant } from "../../types/domain";
+import type { AnalysisMode, Battle, Participant, YearRange } from "../../types/domain";
 
 type MapViewProps = {
   battles: Battle[];
   selectedBattleId: string | null;
   currentYear: number;
+  analysisMode: AnalysisMode;
+  activeYearRange: YearRange;
   participants: Participant[];
   onSelectBattle: (battleId: string | null) => void;
   onResetFilters: () => void;
@@ -567,6 +569,8 @@ export function MapView({
   battles,
   selectedBattleId,
   currentYear,
+  analysisMode,
+  activeYearRange,
   participants,
   onSelectBattle,
   onResetFilters,
@@ -612,8 +616,11 @@ export function MapView({
     () => filterBattlesByHeatCell(battles, focusedHeatCell),
     [battles, focusedHeatCell],
   );
+  const snapshotReferenceYear = analysisMode === "range" ? activeYearRange[1] : currentYear;
+  const activeYearLabel =
+    analysisMode === "range" ? `${activeYearRange[0]}–${activeYearRange[1]}` : String(currentYear);
   const effectiveSnapshot =
-    selectedSnapshot === "auto" ? getSnapshotForYear(currentYear).date : selectedSnapshot;
+    selectedSnapshot === "auto" ? getSnapshotForYear(snapshotReferenceYear).date : selectedSnapshot;
   const effectiveSnapshotLabel =
     `密度气泡 + CShapes 快照 ${cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? effectiveSnapshot}`;
   const countryLookup = useMemo(() => {
@@ -685,11 +692,11 @@ export function MapView({
     setSelectedCountryName(null);
     setPreviewBattleId(null);
     setFocusedHeatCellKey(null);
-  }, [battles, currentYear]);
+  }, [activeYearRange, analysisMode, battles, currentYear]);
 
   useEffect(() => {
     setExpandedEventList(false);
-  }, [eventSearch, eventSortKey, currentYear]);
+  }, [activeYearRange, analysisMode, eventSearch, eventSortKey, currentYear]);
 
   useEffect(() => {
     if (!selectedBattleId) {
@@ -709,7 +716,7 @@ export function MapView({
     const timeoutId = window.setTimeout(() => setYearFeedbackActive(false), 900);
 
     return () => window.clearTimeout(timeoutId);
-  }, [currentYear, effectiveSnapshot]);
+  }, [activeYearLabel, effectiveSnapshot]);
   const activeCountryHighlight = useMemo(() => {
     if (selectedCountryName) {
       return getCountryConflictHighlight(selectedCountryName, battles, countryLookup);
@@ -1024,7 +1031,7 @@ export function MapView({
       });
 
       heatMarker
-        .bindTooltip(`${currentYear} 年 · ${cell.count} 条事件 · 点击查看该区域事件`)
+        .bindTooltip(`${activeYearLabel} · ${cell.count} 条事件 · 点击查看该区域事件`)
         .on("click", () => handleHeatCellSelect(cell));
 
       heatMarker.addTo(heatLayer);
@@ -1032,7 +1039,7 @@ export function MapView({
 
     heatLayer.bringToFront();
     battleLayerRef.current?.bringToFront();
-  }, [currentYear, focusedHeatCellKey, heatCells, mapLayerMode, maxHeatCellCount]);
+  }, [activeYearLabel, focusedHeatCellKey, heatCells, mapLayerMode, maxHeatCellCount]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1160,7 +1167,7 @@ export function MapView({
             role="status"
             aria-live="polite"
           >
-            <strong>{currentYear}</strong>
+            <strong>{activeYearLabel}</strong>
             <span>{effectiveSnapshotLabel}</span>
           </div>
           <div className="map-layer-mode" aria-live="polite">
@@ -1188,7 +1195,9 @@ export function MapView({
             {mapLayerMode === "heat" ? (
               <div>
                 <span style={{ "--legend-color": "#ff8066" } as React.CSSProperties} />
-                <strong>气泡越大、颜色越亮，当前年份事件越集中</strong>
+                <strong>
+                  气泡越大、颜色越亮，{analysisMode === "range" ? "当前年份范围" : "当前年份"}事件越集中
+                </strong>
               </div>
             ) : null}
             {mapLayerMode === "events" ? (
@@ -1257,7 +1266,7 @@ export function MapView({
           </div>
           {battles.length === 0 ? (
             <div className="empty-state empty-state-with-action">
-              <p>{currentYear} 年没有可见的冲突事件。</p>
+              <p>{activeYearLabel} 没有可见的冲突事件。</p>
               <button className="secondary-action-button" type="button" onClick={onResetFilters}>
                 重置筛选
               </button>

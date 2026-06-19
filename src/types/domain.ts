@@ -68,6 +68,8 @@ export type Participant = {
 
 export type YearRange = [number, number];
 
+export type AnalysisMode = "single" | "range";
+
 export type ConflictEventFilters = {
   selectedYearRange: YearRange;
   selectedParticipant: string | null;

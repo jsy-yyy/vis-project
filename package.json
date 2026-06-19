@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "build:hced": "node scripts/build-hced-conflict-events.mjs",
     "build:cshapes": "node scripts/build-cshapes-snapshots.mjs",
+    "check:flags": "node --experimental-strip-types scripts/check-flag-coverage.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run --exclude e2e/**",
     "test:e2e": "playwright test",

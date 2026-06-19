@@ -79,6 +79,7 @@ describe("app state helpers", () => {
         "?year=1944&start=1939&end=1945&group=world-war-ii&participant=germany&event=event-1918&locked=1",
       ),
     ).toEqual({
+      analysisMode: "range",
       currentYear: 1944,
       selectedYearRange: [1939, 1945],
       selectedParticipant: "germany",
@@ -89,6 +90,7 @@ describe("app state helpers", () => {
 
   it("does not treat missing numeric URL parameters as zero", () => {
     expect(parseSharedAppState("")).toEqual({
+      analysisMode: "single",
       currentYear: null,
       selectedYearRange: null,
       selectedParticipant: null,
@@ -100,6 +102,7 @@ describe("app state helpers", () => {
   it("serializes only non-default shared state", () => {
     expect(
       buildSharedAppSearch({
+        analysisMode: "range",
         allYearRange: [1886, 2003],
         currentYear: 1944,
         selectedYearRange: [1939, 1945],
@@ -108,12 +111,27 @@ describe("app state helpers", () => {
         selectedBattleLocked: true,
       }),
     ).toBe(
-      "?year=1944&start=1939&end=1945&participant=germany&event=event-1918&locked=1",
+      "?mode=multi&year=1944&start=1939&end=1945&participant=germany&event=event-1918&locked=1",
     );
+  });
+
+  it("serializes single-year analysis without range parameters", () => {
+    expect(
+      buildSharedAppSearch({
+        analysisMode: "single",
+        allYearRange: [1886, 2003],
+        currentYear: 1944,
+        selectedYearRange: [1939, 1945],
+        selectedParticipant: null,
+        selectedBattleId: null,
+        selectedBattleLocked: false,
+      }),
+    ).toBe("?year=1944");
   });
 
   it("ignores the legacy group parameter when restoring shared state", () => {
     expect(parseSharedAppState("?year=1944&group=world-war-ii")).toEqual({
+      analysisMode: "single",
       currentYear: 1944,
       selectedYearRange: null,
       selectedParticipant: null,

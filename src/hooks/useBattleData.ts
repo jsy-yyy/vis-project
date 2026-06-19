@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import {
+  canonicalizeBattleParticipants,
+  getCanonicalParticipantName,
+} from "../lib/participantNormalization";
 import type { Actor, Battle, Participant, War } from "../types/domain";
 
 type BattleDataState = {
@@ -130,8 +134,6 @@ function mapRows(rows: HcedEventRow[]) {
     const rawParticipantNames = parseList(row.participants);
     const participantIds = rawParticipantNames.map((participantName) => {
       const participantId = slugify(participantName);
-      const actor = actors.find((item) => item.name === participantName && item.networkEligible);
-      participantLookup.set(participantId, actor?.name ?? participantName);
       return participantId;
     });
     const war = warYears.get(warId);
@@ -148,7 +150,7 @@ function mapRows(rows: HcedEventRow[]) {
       });
     }
 
-    return {
+    const battle = canonicalizeBattleParticipants({
       id: row.event_id,
       name: row.event_name || row.event_id,
       warId,
@@ -169,7 +171,17 @@ function mapRows(rows: HcedEventRow[]) {
       type: row.event_type || "Conflict event",
       description: row.narrative || undefined,
       source: row.source || undefined,
-    };
+    });
+
+    for (const participantId of battle.participants) {
+      const actor = battle.actors?.find((item) => item.id === participantId && item.networkEligible);
+      participantLookup.set(
+        participantId,
+        actor?.name ?? getCanonicalParticipantName(participantId),
+      );
+    }
+
+    return battle;
   });
 
   const wars: War[] = Array.from(warYears.values()).sort((a, b) => {

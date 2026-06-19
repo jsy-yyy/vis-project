@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ListTree } from "lucide-react";
 import { getAdjacentBattleId } from "../../lib/battleInteraction";
+import { summarizeBattles } from "../../lib/battleAnalytics";
 import { getTimelinePeriodComparison, getYearlyEventSummary } from "../../lib/timelineAnalytics";
-import type { Battle, Participant, YearRange } from "../../types/domain";
+import type { AnalysisMode, Battle, Participant, YearRange } from "../../types/domain";
 
 type TimelineDetailsProps = {
   baselineBattles: Battle[];
@@ -13,6 +14,7 @@ type TimelineDetailsProps = {
   selectedBattleLocked: boolean;
   allYearRange: YearRange;
   selectedYearRange: YearRange;
+  analysisMode: AnalysisMode;
   currentYear: number;
   onSelectBattle: (battleId: string | null) => void;
   onResetFilters: () => void;
@@ -30,6 +32,7 @@ export function TimelineDetails({
   selectedBattleLocked,
   allYearRange,
   selectedYearRange,
+  analysisMode,
   currentYear,
   onSelectBattle,
   onResetFilters,
@@ -42,11 +45,11 @@ export function TimelineDetails({
   );
   const currentYearBattles = useMemo(
     () =>
-      filteredBattles
-        .filter((battle) => battle.year === currentYear)
-        .sort((left, right) => left.name.localeCompare(right.name)),
-    [currentYear, filteredBattles],
+      (analysisMode === "range" ? filteredBattles : filteredBattles.filter((battle) => battle.year === currentYear))
+        .sort((left, right) => left.year - right.year || left.name.localeCompare(right.name)),
+    [analysisMode, currentYear, filteredBattles],
   );
+  const rangeSummary = useMemo(() => summarizeBattles(filteredBattles), [filteredBattles]);
   const currentYearSummary = useMemo(
     () => getYearlyEventSummary(baselineBattles, filteredBattles, currentYear),
     [baselineBattles, currentYear, filteredBattles],
@@ -58,10 +61,18 @@ export function TimelineDetails({
   const previousBattleId = getAdjacentBattleId(currentYearBattles, selectedBattleId, -1);
   const nextBattleId = getAdjacentBattleId(currentYearBattles, selectedBattleId, 1);
   const visibleCurrentYearBattles = currentYearBattles.slice(0, visibleEventCount);
+  const activeLabel =
+    analysisMode === "range" ? `${selectedYearRange[0]}–${selectedYearRange[1]} 年` : `${currentYear} 年`;
+  const selectedBattleOutsideActiveScope =
+    selectedBattleLocked &&
+    selectedBattleYear !== null &&
+    (analysisMode === "range"
+      ? selectedBattleYear < selectedYearRange[0] || selectedBattleYear > selectedYearRange[1]
+      : selectedBattleYear !== currentYear);
 
   useEffect(() => {
     setVisibleEventCount(eventListLimit);
-  }, [currentYear, filteredBattles, selectedYearRange]);
+  }, [analysisMode, currentYear, filteredBattles, selectedYearRange]);
 
   function formatRange(range: YearRange | null) {
     if (!range) {
@@ -84,13 +95,14 @@ export function TimelineDetails({
       >
         <span>
           <ListTree size={18} />
-          <strong>{currentYear} 年详情</strong>
+          <strong>{activeLabel}详情</strong>
           <small>
-            {currentYearSummary.filteredCount} 条当前结果 · 年份窗口 {selectedYearRange[0]}–{selectedYearRange[1]}
+            {currentYearBattles.length} 条当前结果
+            {analysisMode === "range" ? " · 多年度分析" : ""}
           </small>
         </span>
         <span>
-          {selectedBattleLocked && selectedBattleYear !== currentYear ? `锁定事件位于 ${selectedBattleYear} 年 · ` : ""}
+          {selectedBattleOutsideActiveScope ? `锁定事件位于 ${selectedBattleYear} 年 · ` : ""}
           {expanded ? "收起" : "展开分析"}
           <ChevronDown size={17} />
         </span>
@@ -100,15 +112,18 @@ export function TimelineDetails({
         <div id="timeline-details-content" className="timeline-details-content">
           <div className="timeline-analysis-grid">
             <article className="timeline-analysis-card">
-              <h3>{currentYear} 年摘要</h3>
+              <h3>{activeLabel}摘要</h3>
               <dl>
-                <div><dt>窗口内全部事件</dt><dd>{currentYearSummary.totalCount}</dd></div>
-                <div><dt>符合当前参战方</dt><dd>{currentYearSummary.filteredCount}</dd></div>
+                <div>
+                  <dt>{analysisMode === "range" ? "范围内事件" : "窗口内全部事件"}</dt>
+                  <dd>{analysisMode === "range" ? baselineBattles.length : currentYearSummary.totalCount}</dd>
+                </div>
+                <div><dt>符合当前参战方</dt><dd>{currentYearBattles.length}</dd></div>
                 <div>
                   <dt>主要参战方</dt>
                   <dd>
-                    {currentYearSummary.topParticipants.length > 0
-                      ? currentYearSummary.topParticipants
+                    {(analysisMode === "range" ? rangeSummary.topParticipants : currentYearSummary.topParticipants).length > 0
+                      ? (analysisMode === "range" ? rangeSummary.topParticipants : currentYearSummary.topParticipants)
                           .map(([id, count]) => `${participantNames.get(id) ?? id} (${count})`)
                           .join(", ")
                       : "没有匹配的参战方"}
@@ -117,18 +132,32 @@ export function TimelineDetails({
               </dl>
             </article>
             <article className="timeline-analysis-card">
-              <h3>前后阶段对比</h3>
+              <h3>{analysisMode === "range" ? "范围概览" : "前后阶段对比"}</h3>
               <dl>
-                <div><dt>{formatRange(periodComparison.previousRange)}</dt><dd>{periodComparison.previousCount} 条</dd></div>
-                <div><dt>{currentYear}</dt><dd>{currentYearSummary.filteredCount} 条</dd></div>
-                <div><dt>{formatRange(periodComparison.nextRange)}</dt><dd>{periodComparison.nextCount} 条</dd></div>
+                {analysisMode === "range" ? (
+                  <>
+                    <div><dt>{selectedYearRange[0]}</dt><dd>起始年</dd></div>
+                    <div><dt>{formatRange(rangeSummary.yearRange)}</dt><dd>{rangeSummary.totalBattles} 条</dd></div>
+                    <div><dt>{selectedYearRange[1]}</dt><dd>结束年</dd></div>
+                  </>
+                ) : (
+                  <>
+                    <div><dt>{formatRange(periodComparison.previousRange)}</dt><dd>{periodComparison.previousCount} 条</dd></div>
+                    <div><dt>{currentYear}</dt><dd>{currentYearSummary.filteredCount} 条</dd></div>
+                    <div><dt>{formatRange(periodComparison.nextRange)}</dt><dd>{periodComparison.nextCount} 条</dd></div>
+                  </>
+                )}
               </dl>
-              <p>基于当前年份窗口和参战方状态，对比当前年份前后各五年。</p>
+              <p>
+                {analysisMode === "range"
+                  ? "当前列表展示所选年份范围内的全部匹配事件。"
+                  : "基于当前年份窗口和参战方状态，对比当前年份前后各五年。"}
+              </p>
             </article>
           </div>
 
           <div className="timeline-event-heading">
-            <h3>{currentYear} 年事件</h3>
+            <h3>{activeLabel}事件</h3>
             <div className="timeline-event-navigation">
               <span>显示 {visibleCurrentYearBattles.length} / {currentYearBattles.length}</span>
               <button
@@ -157,7 +186,7 @@ export function TimelineDetails({
 
           {currentYearBattles.length === 0 ? (
             <div className="empty-state empty-state-with-action">
-              <p>{currentYear} 年没有符合当前联动状态的冲突事件。</p>
+              <p>{activeLabel}没有符合当前联动状态的冲突事件。</p>
               <button className="secondary-action-button" type="button" onClick={onResetFilters}>重置联动</button>
             </div>
           ) : (

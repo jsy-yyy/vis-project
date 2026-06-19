@@ -6,17 +6,22 @@ import type {
 } from "react";
 import { Grid3X3, Maximize2, RotateCcw, Search, Share2, Waypoints, X, ZoomIn, ZoomOut } from "lucide-react";
 import { resolveDominantHistoricalFlag } from "../../lib/battlePopup";
-import { buildParticipantNetwork } from "../../lib/networkAnalytics";
+import {
+  buildParticipantNetwork,
+  filterNetworkBattlesByWar,
+  getRelativeParticipantRelations,
+} from "../../lib/networkAnalytics";
 import type {
   ParticipantNetworkEdge,
   ParticipantNetworkNode,
   ParticipantNetworkRelation,
-  ParticipantNetworkSide,
+  ParticipantRelativeRelation,
 } from "../../lib/networkAnalytics";
-import type { Battle, Participant } from "../../types/domain";
+import type { Battle, Participant, War } from "../../types/domain";
 
 type NetworkViewProps = {
   battles: Battle[];
+  wars: War[];
   participants: Participant[];
   selectedParticipant: string | null;
   highlightedParticipantIds: string[];
@@ -54,7 +59,6 @@ const heatmapBottomMargin = 26;
 type ParticipantDetail = {
   name: string;
   eventCount: number;
-  side: ParticipantNetworkSide;
   winnerCount: number;
   loserCount: number;
   neutralCount: number;
@@ -165,20 +169,24 @@ function getRelationLabel(relation: ParticipantNetworkRelation) {
   return "普通共现";
 }
 
-function getSideLabel(side: ParticipantNetworkSide) {
-  if (side === "winner") {
-    return "胜方主导";
+function getRelativeRelationLabel(relation: ParticipantRelativeRelation) {
+  if (relation === "current") {
+    return "当前参战方";
   }
 
-  if (side === "loser") {
-    return "败方主导";
+  if (relation === "ally") {
+    return "盟友关系";
   }
 
-  if (side === "mixed") {
-    return "混合阵营";
+  if (relation === "opponent") {
+    return "敌对关系";
   }
 
-  return "未判定";
+  if (relation === "cooccurrence") {
+    return "普通共现";
+  }
+
+  return "未聚焦关系";
 }
 
 function formatYearRange(battles: Battle[]) {
@@ -284,7 +292,6 @@ function getParticipantDetail(
   return {
     name: getParticipantName(participantId, participantNames),
     eventCount: participantBattles.length,
-    side: networkNode?.side ?? "neutral",
     winnerCount: networkNode?.winnerCount ?? 0,
     loserCount: networkNode?.loserCount ?? 0,
     neutralCount: networkNode?.neutralCount ?? participantBattles.length,
@@ -357,27 +364,15 @@ function positionNodes(nodes: ParticipantNetworkNode[], focusedParticipantId: st
     ];
   }
 
-  const groupCenters: Record<ParticipantNetworkSide, { x: number; y: number }> = {
-    winner: { x: centerX - 175, y: centerY - 70 },
-    loser: { x: centerX + 175, y: centerY - 70 },
-    mixed: { x: centerX, y: centerY + 150 },
-    neutral: { x: centerX, y: centerY },
-  };
-  const groups = new Map<ParticipantNetworkSide, ParticipantNetworkNode[]>();
-
-  for (const node of nodes) {
-    groups.set(node.side, [...(groups.get(node.side) ?? []), node]);
-  }
-
-  return nodes.map((node) => {
-    const group = groups.get(node.side) ?? [node];
-    const groupIndex = group.findIndex((item) => item.id === node.id);
-    const groupCenter = groupCenters[node.side];
-    const groupRadius = Math.min(126, 38 + group.length * 12);
-    const angle = group.length === 1 ? -Math.PI / 2 : (groupIndex / group.length) * Math.PI * 2 - Math.PI / 2;
+  return nodes.map((node, index) => {
+    const ringIndex = index % 12;
+    const ring = Math.floor(index / 12);
+    const ringCount = Math.min(12, nodes.length - ring * 12);
+    const angle = (ringIndex / Math.max(1, ringCount)) * Math.PI * 2 - Math.PI / 2;
+    const orbitRadius = 115 + ring * 105;
     const radius = getNodeRadius(node.eventCount, maxEventCount);
-    const x = groupCenter.x + Math.cos(angle) * groupRadius;
-    const y = groupCenter.y + Math.sin(angle) * groupRadius;
+    const x = centerX + Math.cos(angle) * orbitRadius;
+    const y = centerY + Math.sin(angle) * orbitRadius;
     const labelDistance = radius + 10;
     const labelX = x + Math.cos(angle) * labelDistance;
     const labelY = y + Math.sin(angle) * labelDistance;
@@ -397,6 +392,7 @@ function positionNodes(nodes: ParticipantNetworkNode[], focusedParticipantId: st
 
 export function NetworkView({
   battles,
+  wars,
   participants,
   selectedParticipant,
   highlightedParticipantIds,
@@ -411,15 +407,36 @@ export function NetworkView({
   const [participantSearch, setParticipantSearch] = useState("");
   const [participantOptionsOpen, setParticipantOptionsOpen] = useState(false);
   const [activeParticipantOption, setActiveParticipantOption] = useState(0);
+  const [selectedNetworkWarId, setSelectedNetworkWarId] = useState<string | null>(null);
   const networkStageRef = useRef<HTMLDivElement | null>(null);
   const panStartRef = useRef<{ clientX: number; clientY: number; x: number; y: number } | null>(null);
   const participantNames = useMemo(
     () => new Map(participants.map((participant) => [participant.id, participant.name])),
     [participants],
   );
+  const networkWarOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    for (const battle of battles) {
+      counts.set(battle.warId, (counts.get(battle.warId) ?? 0) + 1);
+    }
+
+    return wars
+      .filter((war) => counts.has(war.id))
+      .map((war) => ({ ...war, eventCount: counts.get(war.id) ?? 0 }))
+      .sort((left, right) => right.eventCount - left.eventCount || left.name.localeCompare(right.name));
+  }, [battles, wars]);
+  const networkBattles = useMemo(
+    () => filterNetworkBattlesByWar(battles, selectedNetworkWarId),
+    [battles, selectedNetworkWarId],
+  );
+  const selectedNetworkWar = useMemo(
+    () => networkWarOptions.find((war) => war.id === selectedNetworkWarId) ?? null,
+    [networkWarOptions, selectedNetworkWarId],
+  );
   const network = useMemo(
-    () => buildParticipantNetwork(battles, maxVisibleNodes, { focusedParticipantId: selectedParticipant }),
-    [battles, selectedParticipant],
+    () => buildParticipantNetwork(networkBattles, maxVisibleNodes, { focusedParticipantId: selectedParticipant }),
+    [networkBattles, selectedParticipant],
   );
   const nodes = useMemo(() => positionNodes(network.nodes, selectedParticipant), [network.nodes, selectedParticipant]);
   const fitViewport = useMemo(() => getFitViewport(nodes), [nodes]);
@@ -428,8 +445,8 @@ export function NetworkView({
     [network.nodes],
   );
   const participantHeatmap = useMemo(
-    () => buildParticipantHeatmap(battles, heatmapRows),
-    [battles, heatmapRows],
+    () => buildParticipantHeatmap(networkBattles, heatmapRows),
+    [heatmapRows, networkBattles],
   );
   const visibleLabelNodeIds = useMemo(
     () => new Set(network.nodes.slice(0, visibleLabelLimit).map((node) => node.id)),
@@ -441,13 +458,13 @@ export function NetworkView({
       new Map(
         network.nodes.map((node) => {
           const participantName = getParticipantName(node.id, participantNames);
-          const participantYears = battles
+          const participantYears = networkBattles
             .filter((battle) => battle.participants.includes(node.id))
             .map((battle) => battle.year);
           return [node.id, resolveDominantHistoricalFlag(participantName, participantYears)] as const;
         }),
       ),
-    [battles, network.nodes, participantNames],
+    [network.nodes, networkBattles, participantNames],
   );
   const edges = network.edges.slice(0, maxVisibleEdges);
   const maxEdgeWeight = Math.max(1, ...edges.map((edge) => edge.weight));
@@ -484,26 +501,36 @@ export function NetworkView({
 
     return ids;
   }, [edges, nodes, selectedParticipant, selectionVisible]);
+  const relativeParticipantRelations = useMemo(
+    () => getRelativeParticipantRelations(selectionVisible ? selectedParticipant : null, edges),
+    [edges, selectedParticipant, selectionVisible],
+  );
   const selectedParticipantDetail = useMemo(
     () =>
       selectedParticipant
         ? getParticipantDetail(
             selectedParticipant,
-            battles,
+            networkBattles,
             participantNames,
             network.nodes.find((node) => node.id === selectedParticipant),
           )
         : null,
-    [battles, network.nodes, participantNames, selectedParticipant],
+    [network.nodes, networkBattles, participantNames, selectedParticipant],
   );
   const inspectedEdge = useMemo(
     () => edges.find((edge) => getEdgeKey(edge.source, edge.target) === inspectedEdgeKey) ?? null,
     [edges, inspectedEdgeKey],
   );
   const inspectedEdgeDetail = useMemo(
-    () => inspectedEdge ? getEdgeDetail(inspectedEdge, battles, participantNames) : null,
-    [battles, inspectedEdge, participantNames],
+    () => inspectedEdge ? getEdgeDetail(inspectedEdge, networkBattles, participantNames) : null,
+    [inspectedEdge, networkBattles, participantNames],
   );
+
+  useEffect(() => {
+    if (selectedNetworkWarId && !networkWarOptions.some((war) => war.id === selectedNetworkWarId)) {
+      setSelectedNetworkWarId(null);
+    }
+  }, [networkWarOptions, selectedNetworkWarId]);
 
   useEffect(() => {
     if (!inspectedEdgeKey) {
@@ -518,7 +545,7 @@ export function NetworkView({
   useEffect(() => {
     setViewport(fitViewport);
     setTooltip(null);
-  }, [activeView, battles, fitViewport]);
+  }, [activeView, fitViewport, networkBattles]);
 
   useEffect(() => {
     setViewport(fitViewport);
@@ -639,80 +666,104 @@ export function NetworkView({
       </div>
       <div className="network-heading">
         <p>
-          节点表示参战方 participant，颜色表示当前筛选范围内的主导阵营，连线表示两个 participant 的事件关系。
+          节点表示参战方，连线颜色表示事件记录中的盟友、敌对或普通共现关系。
+          {selectionVisible ? " 当前为单国家中心图，节点颜色表示相对当前国家的关系分类。" : ""}
         </p>
         <div className="network-legend" aria-label="参战方网络图例">
           <span><i className="node-scale" />节点大小：事件数</span>
-          <span><i className="node winner" />胜方主导</span>
-          <span><i className="node loser" />败方主导</span>
-          <span><i className="node mixed" />混合阵营</span>
-          <span><i className="node neutral" />未判定</span>
+          {selectionVisible ? (
+            <>
+              <span><i className="node ally" />当前国家的盟友</span>
+              <span><i className="node opponent" />当前国家的敌人</span>
+              <span><i className="node neutral" />普通共现</span>
+            </>
+          ) : null}
           <span><i className="edge width" />边宽：相关事件数</span>
-          <span><i className="edge ally" />同阵营</span>
-          <span><i className="edge opponent" />对立</span>
+          <span><i className="edge ally" />盟友事件</span>
+          <span><i className="edge opponent" />敌对事件</span>
           <span><i className="edge cooccurrence" />普通共现</span>
           <span><i className="selected" />当前选中参战方</span>
         </div>
       </div>
-      <div className="participant-combobox">
-        <label htmlFor="participant-network-search">聚焦参战方</label>
-        <div className="participant-combobox-control">
-          <Search size={16} />
-          <input
-            id="participant-network-search"
-            type="search"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded={participantOptionsOpen}
-            aria-controls="participant-network-options"
-            aria-activedescendant={
-              participantOptionsOpen && visibleParticipantOptions[activeParticipantOption]
-                ? `participant-option-${visibleParticipantOptions[activeParticipantOption].id}`
-                : undefined
-            }
-            value={participantSearch}
-            placeholder="搜索国家或历史政权"
-            onFocus={() => setParticipantOptionsOpen(true)}
-            onChange={(event) => {
-              setParticipantSearch(event.target.value);
-              setParticipantOptionsOpen(true);
-              setActiveParticipantOption(0);
-            }}
-            onKeyDown={handleParticipantSearchKeyDown}
-          />
-          {selectedParticipant || participantSearch ? (
-            <button
-              type="button"
-              title="清除参战方选择"
-              onClick={() => {
-                setParticipantSearch("");
-                selectParticipantOption(null);
+      <div className="network-filter-row">
+        <div className="participant-combobox">
+          <label htmlFor="participant-network-search">聚焦参战方</label>
+          <div className="participant-combobox-control">
+            <Search size={16} />
+            <input
+              id="participant-network-search"
+              type="search"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={participantOptionsOpen}
+              aria-controls="participant-network-options"
+              aria-activedescendant={
+                participantOptionsOpen && visibleParticipantOptions[activeParticipantOption]
+                  ? `participant-option-${visibleParticipantOptions[activeParticipantOption].id}`
+                  : undefined
+              }
+              value={participantSearch}
+              placeholder="搜索国家或历史政权"
+              onFocus={() => setParticipantOptionsOpen(true)}
+              onChange={(event) => {
+                setParticipantSearch(event.target.value);
+                setParticipantOptionsOpen(true);
+                setActiveParticipantOption(0);
               }}
-            >
-              <X size={15} />
-            </button>
+              onKeyDown={handleParticipantSearchKeyDown}
+            />
+            {selectedParticipant || participantSearch ? (
+              <button
+                type="button"
+                title="清除参战方选择"
+                onClick={() => {
+                  setParticipantSearch("");
+                  selectParticipantOption(null);
+                }}
+              >
+                <X size={15} />
+              </button>
+            ) : null}
+          </div>
+          {participantOptionsOpen ? (
+            <ul id="participant-network-options" className="participant-combobox-options" role="listbox">
+              {visibleParticipantOptions.length > 0 ? visibleParticipantOptions.map((participant, index) => (
+                <li
+                  id={`participant-option-${participant.id}`}
+                  key={participant.id}
+                  role="option"
+                  aria-selected={participant.id === selectedParticipant}
+                  className={index === activeParticipantOption ? "active" : ""}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => selectParticipantOption(participant.id)}
+                >
+                  <span>{participant.name}</span>
+                  <small>{participant.id}</small>
+                </li>
+              )) : (
+                <li className="empty" aria-disabled="true">没有匹配的参战方</li>
+              )}
+            </ul>
           ) : null}
         </div>
-        {participantOptionsOpen ? (
-          <ul id="participant-network-options" className="participant-combobox-options" role="listbox">
-            {visibleParticipantOptions.length > 0 ? visibleParticipantOptions.map((participant, index) => (
-              <li
-                id={`participant-option-${participant.id}`}
-                key={participant.id}
-                role="option"
-                aria-selected={participant.id === selectedParticipant}
-                className={index === activeParticipantOption ? "active" : ""}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectParticipantOption(participant.id)}
-              >
-                <span>{participant.name}</span>
-                <small>{participant.id}</small>
-              </li>
-            )) : (
-              <li className="empty" aria-disabled="true">没有匹配的参战方</li>
-            )}
-          </ul>
-        ) : null}
+        <label className="network-war-filter" htmlFor="network-war-select">
+          <span>具体战争</span>
+          <select
+            id="network-war-select"
+            value={selectedNetworkWarId ?? ""}
+            onChange={(event) => {
+              setSelectedNetworkWarId(event.target.value || null);
+              setInspectedEdgeKey(null);
+            }}
+          >
+            <option value="">全部战争 · {battles.length} 条事件</option>
+            {networkWarOptions.map((war) => (
+              <option key={war.id} value={war.id}>
+                {war.name} · {war.eventCount} 条事件
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       {nodes.length === 0 ? (
         <div className="empty-state empty-state-with-action">
@@ -795,7 +846,7 @@ export function NetworkView({
                     const edgeKey = getEdgeKey(edge.source, edge.target);
                     const connectedToSelection =
                       !selectionVisible || edge.source === selectedParticipant || edge.target === selectedParticipant;
-                    const edgeDetail = getEdgeDetail(edge, battles, participantNames);
+                    const edgeDetail = getEdgeDetail(edge, networkBattles, participantNames);
                     const edgeOpacity = connectedToSelection
                       ? 0.28 + (edge.weight / maxEdgeWeight) * 0.62
                       : 0.08;
@@ -806,7 +857,8 @@ export function NetworkView({
                       <line
                         key={edgeKey}
                         className={[
-                          connectedToSelection ? `network-edge ${edge.relation}` : `network-edge ${edge.relation} muted`,
+                          `network-edge ${edge.relation}`,
+                          connectedToSelection ? "" : "muted",
                           inspectedEdgeKey === edgeKey ? "active" : "",
                           highlightedByEvent ? "event-highlighted" : "",
                         ].join(" ")}
@@ -861,6 +913,7 @@ export function NetworkView({
                     const inspected =
                       inspectedEdge && (inspectedEdge.source === node.id || inspectedEdge.target === node.id);
                     const highlightedByEvent = highlightedParticipantIdSet.has(node.id);
+                    const relativeRelation = relativeParticipantRelations.get(node.id) ?? "unrelated";
                     const showLabel =
                       visibleLabelNodeIds.has(node.id) || selected || Boolean(inspected) || (selectionVisible && index < 12);
 
@@ -869,7 +922,7 @@ export function NetworkView({
                         key={node.id}
                         className={[
                           "network-svg-node",
-                          node.side,
+                          selectionVisible ? relativeRelation : "neutral",
                           selected ? "active" : "",
                           muted ? "muted" : "",
                           inspected ? "inspected" : "",
@@ -877,19 +930,19 @@ export function NetworkView({
                         ].join(" ")}
                         role="button"
                         tabIndex={0}
-                        aria-label={`${participantName}：${getSideLabel(node.side)}，${node.eventCount} 条冲突事件`}
+                        aria-label={`${participantName}：${getRelativeRelationLabel(relativeRelation)}，${node.eventCount} 条冲突事件`}
                         aria-pressed={selected}
                         onClick={() => onSelectParticipant(selected ? null : node.id)}
                         onPointerEnter={(event) =>
                           showTooltip(event, participantName, [
-                            `${getSideLabel(node.side)} · ${node.eventCount} 条事件`,
+                            `${getRelativeRelationLabel(relativeRelation)} · ${node.eventCount} 条事件`,
                             `胜方 ${node.winnerCount} / 败方 ${node.loserCount} / 未判定 ${node.neutralCount}`,
                             highlightedByEvent ? "属于当前选中事件" : "点击可筛选此参战方",
                           ])
                         }
                         onPointerMove={(event) =>
                           showTooltip(event, participantName, [
-                            `${getSideLabel(node.side)} · ${node.eventCount} 条事件`,
+                            `${getRelativeRelationLabel(relativeRelation)} · ${node.eventCount} 条事件`,
                             `胜方 ${node.winnerCount} / 败方 ${node.loserCount} / 未判定 ${node.neutralCount}`,
                             highlightedByEvent ? "属于当前选中事件" : "点击可筛选此参战方",
                           ])
@@ -904,27 +957,20 @@ export function NetworkView({
                       >
                         <circle cx={node.x} cy={node.y} r={node.radius}>
                           <title>
-                            {participantName}：{getSideLabel(node.side)}，{node.eventCount} 条冲突事件。
+                            {participantName}：{getRelativeRelationLabel(relativeRelation)}，{node.eventCount} 条冲突事件。
                             胜方 {node.winnerCount} / 败方 {node.loserCount} / 未判定 {node.neutralCount}。
                           </title>
                         </circle>
                         {participantFlag ? (
                           <foreignObject
-                            className="network-node-flag"
+                            className={node.id === "ussr" ? "network-node-flag ussr" : "network-node-flag"}
                             x={node.x - node.radius + 4}
                             y={node.y - node.radius + 4}
                             width={Math.max(1, node.radius * 2 - 8)}
                             height={Math.max(1, node.radius * 2 - 8)}
                           >
                             <div className="network-node-flag-shell">
-                              {participantFlag.src ? (
-                                <img src={participantFlag.src} alt="" />
-                              ) : (
-                                <span
-                                  className={`country-flag flag-iso-${participantFlag.isoCode ?? ""}`}
-                                  aria-hidden="true"
-                                />
-                              )}
+                              <img src={participantFlag.src} alt="" />
                             </div>
                           </foreignObject>
                         ) : null}
@@ -1091,8 +1137,9 @@ export function NetworkView({
           </div>
           <p className="network-footnote">
             当前显示 {nodes.length} 个活跃参战方和 {edges.length} 条较强共现关系。
-            边宽按相关事件数相对缩放，越粗表示两个参战方共同出现或处于关联阵营的事件越多。
-            节点颜色与边类别优先使用 winner/loser 字段判断；缺少阵营信息时保留为未判定或普通共现。
+            {selectedNetworkWar ? ` 当前战争：${selectedNetworkWar.name}，共 ${networkBattles.length} 条范围内事件。` : ""}
+            边宽按相关事件数相对缩放，越粗表示两个参战方在相同事件中出现的次数越多。
+            选择参战方后，颜色仅表示它与邻居在 winner/loser 事件字段中的相对关系；字段不足时保留为普通共现。
             {selectedParticipant && selectionVisible
               ? ` 已聚焦 ${selectedParticipantName} 及其最强一阶邻居。`
               : ""}
@@ -1111,11 +1158,7 @@ export function NetworkView({
                       <dd>{selectedParticipantDetail.eventCount}</dd>
                     </div>
                     <div>
-                      <dt>主导阵营</dt>
-                      <dd>{getSideLabel(selectedParticipantDetail.side)}</dd>
-                    </div>
-                    <div>
-                      <dt>阵营构成</dt>
+                      <dt>事件角色记录</dt>
                       <dd>
                         胜方 {selectedParticipantDetail.winnerCount} / 败方 {selectedParticipantDetail.loserCount} / 未判定{" "}
                         {selectedParticipantDetail.neutralCount}

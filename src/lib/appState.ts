@@ -1,5 +1,4 @@
-import type { Battle } from "../types/domain";
-import type { YearRange } from "../types/domain";
+import type { AnalysisMode, Battle, YearRange } from "../types/domain";
 
 type NamedRow = {
   id: string;
@@ -42,6 +41,7 @@ export function getVisibleSelectedEvent(
 }
 
 export type SharedAppState = {
+  analysisMode: AnalysisMode;
   currentYear: number | null;
   selectedYearRange: YearRange | null;
   selectedParticipant: string | null;
@@ -64,10 +64,12 @@ export function parseSharedAppState(search: string): SharedAppState {
   const end = parseOptionalInteger(params.get("end"));
   const year = parseOptionalInteger(params.get("year"));
   const selectedBattleId = params.get("event")?.trim() || null;
+  const hasYearRange = start !== null && end !== null;
 
   return {
+    analysisMode: params.get("mode") === "multi" || hasYearRange ? "range" : "single",
     currentYear: year,
-    selectedYearRange: start !== null && end !== null ? [start, end] : null,
+    selectedYearRange: hasYearRange ? [start, end] : null,
     selectedParticipant: params.get("participant")?.trim() || null,
     selectedBattleId,
     selectedBattleLocked: params.get("locked") === "1" && Boolean(selectedBattleId),
@@ -75,6 +77,7 @@ export function parseSharedAppState(search: string): SharedAppState {
 }
 
 type BuildSharedAppStateInput = {
+  analysisMode: AnalysisMode;
   allYearRange: YearRange;
   currentYear: number;
   selectedYearRange: YearRange;
@@ -84,6 +87,7 @@ type BuildSharedAppStateInput = {
 };
 
 export function buildSharedAppSearch({
+  analysisMode,
   allYearRange,
   currentYear,
   selectedYearRange,
@@ -93,15 +97,16 @@ export function buildSharedAppSearch({
 }: BuildSharedAppStateInput) {
   const params = new URLSearchParams();
 
-  if (currentYear !== allYearRange[1]) {
+  if (analysisMode === "range") {
+    params.set("mode", "multi");
+  }
+
+  if (currentYear !== allYearRange[1] || analysisMode === "range") {
     params.set("year", String(currentYear));
   }
 
-  if (selectedYearRange[0] !== allYearRange[0]) {
+  if (analysisMode === "range") {
     params.set("start", String(selectedYearRange[0]));
-  }
-
-  if (selectedYearRange[1] !== allYearRange[1]) {
     params.set("end", String(selectedYearRange[1]));
   }
 

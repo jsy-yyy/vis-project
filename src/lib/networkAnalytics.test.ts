@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Battle } from "../types/domain";
-import { buildParticipantNetwork } from "./networkAnalytics";
+import {
+  buildParticipantNetwork,
+  filterNetworkBattlesByWar,
+  getRelativeParticipantRelations,
+} from "./networkAnalytics";
 
 function createBattle(id: string, participants: string[]): Battle {
   return {
@@ -11,6 +15,13 @@ function createBattle(id: string, participants: string[]): Battle {
     latitude: 0,
     longitude: 0,
     participants,
+  };
+}
+
+function createBattleInWar(id: string, warId: string, participants: string[]): Battle {
+  return {
+    ...createBattle(id, participants),
+    warId,
   };
 }
 
@@ -177,5 +188,70 @@ describe("network analytics", () => {
       { id: "german", eventCount: 2, winnerCount: 0, loserCount: 2, neutralCount: 0, side: "loser" },
       { id: "french", eventCount: 1, winnerCount: 1, loserCount: 0, neutralCount: 0, side: "winner" },
     ]);
+  });
+
+  it("merges Russia into USSR during the Soviet period without creating a self edge", () => {
+    const battle = createBattleWithActors("soviet-event", ["russia", "ussr", "german"], {
+      russia: "winner",
+      ussr: "winner",
+      german: "loser",
+    });
+    battle.year = 1944;
+
+    const network = buildParticipantNetwork([battle]);
+
+    expect(network.nodes.map((node) => node.id)).toEqual(["german", "ussr"]);
+    expect(network.nodes.find((node) => node.id === "ussr")).toMatchObject({
+      eventCount: 1,
+      winnerCount: 1,
+      side: "winner",
+    });
+    expect(network.edges).toEqual([
+      {
+        source: "german",
+        target: "ussr",
+        weight: 1,
+        allyWeight: 0,
+        opponentWeight: 1,
+        cooccurrenceWeight: 0,
+        relation: "opponent",
+      },
+    ]);
+  });
+
+  it("computes relations relative to the selected participant", () => {
+    const network = buildParticipantNetwork([
+      createBattleWithActors("ally", ["uk", "usa", "germany"], {
+        uk: "winner",
+        usa: "winner",
+        germany: "loser",
+      }),
+      createBattleWithActors("opponent", ["uk", "germany"], {
+        uk: "winner",
+        germany: "loser",
+      }),
+      createBattle("cooccurrence", ["uk", "spain"]),
+      createBattle("unrelated", ["italy", "france"]),
+    ]);
+
+    expect(Object.fromEntries(getRelativeParticipantRelations("uk", network.edges))).toEqual({
+      uk: "current",
+      germany: "opponent",
+      spain: "cooccurrence",
+      usa: "ally",
+    });
+    expect(getRelativeParticipantRelations(null, network.edges).size).toBe(0);
+  });
+
+  it("filters network battles by war without changing the source list", () => {
+    const battles = [
+      createBattleInWar("a", "war-a", ["uk", "germany"]),
+      createBattleInWar("b", "war-b", ["uk", "italy"]),
+      createBattleInWar("c", "war-a", ["usa", "germany"]),
+    ];
+
+    expect(filterNetworkBattlesByWar(battles, null)).toBe(battles);
+    expect(filterNetworkBattlesByWar(battles, "war-a").map((battle) => battle.id)).toEqual(["a", "c"]);
+    expect(filterNetworkBattlesByWar(battles, "missing")).toEqual([]);
   });
 });

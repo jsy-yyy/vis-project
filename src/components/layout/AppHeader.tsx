@@ -4,10 +4,10 @@ type AppHeaderProps = {
   totalBattles: number;
   filteredBattles: number;
   visibleMapBattles: number;
-  currentYear: number;
+  yearLabel: string;
 };
 
-export function AppHeader({ totalBattles, filteredBattles, visibleMapBattles, currentYear }: AppHeaderProps) {
+export function AppHeader({ totalBattles, filteredBattles, visibleMapBattles, yearLabel }: AppHeaderProps) {
   return (
     <header className="app-header">
       <div>
@@ -32,7 +32,7 @@ export function AppHeader({ totalBattles, filteredBattles, visibleMapBattles, cu
         </div>
         <div className="metric-chip">
           <Timer size={18} />
-          <span>{currentYear}</span>
+          <span>{yearLabel}</span>
         </div>
       </div>
     </header>

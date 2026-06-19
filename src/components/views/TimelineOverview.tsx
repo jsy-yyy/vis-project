@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { BarChart3, Pause, Play, RotateCcw, SkipBack, SkipForward, X } from "lucide-react";
 import { getAdjacentPlayableYear, getPlayableYears } from "../../lib/battleInteraction";
 import { getYearlyEventCounts } from "../../lib/timelineAnalytics";
-import { normalizeYearRange, updateYearRangeBoundary } from "../../lib/timelineRange";
-import type { Battle, Participant, YearRange } from "../../types/domain";
+import { normalizeYearRange } from "../../lib/timelineRange";
+import type { AnalysisMode, Battle, Participant, YearRange } from "../../types/domain";
 
 type TimelineOverviewProps = {
   baselineBattles: Battle[];
@@ -15,9 +15,11 @@ type TimelineOverviewProps = {
   selectedBattleLocked: boolean;
   selectedBattleOutOfScope: boolean;
   allYearRange: YearRange;
+  analysisMode: AnalysisMode;
   selectedYearRange: YearRange;
   currentYear: number;
   yearAdjustmentMessage: string | null;
+  onAnalysisModeChange: (mode: AnalysisMode) => void;
   onYearRangeChange: (range: YearRange) => void;
   onCurrentYearChange: (year: number) => void;
   onClearParticipant: () => void;
@@ -35,9 +37,11 @@ export function TimelineOverview({
   selectedBattleLocked,
   selectedBattleOutOfScope,
   allYearRange,
+  analysisMode,
   selectedYearRange,
   currentYear,
   yearAdjustmentMessage,
+  onAnalysisModeChange,
   onYearRangeChange,
   onCurrentYearChange,
   onClearParticipant,
@@ -63,13 +67,18 @@ export function TimelineOverview({
   const playableYears = useMemo(() => getPlayableYears(filteredBattles), [filteredBattles]);
   const previousPlayableYear = getAdjacentPlayableYear(playableYears, currentYear, -1);
   const nextPlayableYear = getAdjacentPlayableYear(playableYears, currentYear, 1);
+  const activeYearRange: YearRange = analysisMode === "range" ? selectedYearRange : [currentYear, currentYear];
+  const rangeStartPercent =
+    ((selectedYearRange[0] - allYearRange[0]) / Math.max(1, allYearRange[1] - allYearRange[0])) * 100;
+  const rangeEndPercent =
+    ((selectedYearRange[1] - allYearRange[0]) / Math.max(1, allYearRange[1] - allYearRange[0])) * 100;
   const selectedParticipantName = selectedParticipant
     ? participants.find((participant) => participant.id === selectedParticipant)?.name ?? selectedParticipant
     : null;
 
   useEffect(() => {
     setIsPlaying(false);
-  }, [filteredBattles, selectedYearRange]);
+  }, [analysisMode, filteredBattles, selectedYearRange]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -100,6 +109,9 @@ export function TimelineOverview({
   }
 
   function handleBrushStart(event: ReactPointerEvent<HTMLDivElement>) {
+    if (analysisMode !== "range") {
+      return;
+    }
     const year = getYearFromPointer(event);
     brushAnchorRef.current = year;
     brushMovedRef.current = false;
@@ -107,6 +119,9 @@ export function TimelineOverview({
   }
 
   function handleBrushMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (analysisMode !== "range") {
+      return;
+    }
     if (brushAnchorRef.current === null || !event.currentTarget.hasPointerCapture(event.pointerId)) {
       return;
     }
@@ -115,11 +130,15 @@ export function TimelineOverview({
   }
 
   function handleBrushEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    if (analysisMode !== "range") {
+      return;
+    }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     if (!brushMovedRef.current) {
-      onCurrentYearChange(getYearFromPointer(event));
+      const year = getYearFromPointer(event);
+      onYearRangeChange([year, year]);
     }
     suppressClickRef.current = true;
     brushAnchorRef.current = null;
@@ -129,12 +148,20 @@ export function TimelineOverview({
   function handleYearKeyDown(event: KeyboardEvent<HTMLButtonElement>, year: number) {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      onCurrentYearChange(Math.max(selectedYearRange[0], year - 1));
+      onCurrentYearChange(Math.max(allYearRange[0], year - 1));
     }
     if (event.key === "ArrowRight") {
       event.preventDefault();
-      onCurrentYearChange(Math.min(selectedYearRange[1], year + 1));
+      onCurrentYearChange(Math.min(allYearRange[1], year + 1));
     }
+  }
+
+  function updateRangeStart(year: number) {
+    onYearRangeChange([Math.min(year, selectedYearRange[1]), selectedYearRange[1]]);
+  }
+
+  function updateRangeEnd(year: number) {
+    onYearRangeChange([selectedYearRange[0], Math.max(year, selectedYearRange[0])]);
   }
 
   return (
@@ -144,7 +171,11 @@ export function TimelineOverview({
           <BarChart3 size={18} />
           <div>
             <h2>时间概览与地图窗口</h2>
-            <p>拖动年度分布选择分析窗口；单击柱形切换地图年份。</p>
+            <p>
+              {analysisMode === "range"
+                ? "拖动年度分布或双滑块选择多年度分析范围。"
+                : "单击柱形或拖动拉条切换地图年份。"}
+            </p>
           </div>
         </div>
         <output className="timeline-current-output" aria-label="当前地图年份">{currentYear}</output>
@@ -152,8 +183,10 @@ export function TimelineOverview({
 
       <div className="timeline-state-strip" aria-label="当前联动状态">
         <span>
-          年份窗口 <strong>{selectedYearRange[0]}–{selectedYearRange[1]}</strong>
-          {selectedYearRange[0] !== allYearRange[0] || selectedYearRange[1] !== allYearRange[1] ? (
+          {analysisMode === "range" ? "年份窗口" : "地图年份"}{" "}
+          <strong>{analysisMode === "range" ? `${selectedYearRange[0]}–${selectedYearRange[1]}` : currentYear}</strong>
+          {analysisMode === "range" &&
+          (selectedYearRange[0] !== allYearRange[0] || selectedYearRange[1] !== allYearRange[1]) ? (
             <button type="button" onClick={() => onYearRangeChange(allYearRange)}>恢复全时期</button>
           ) : null}
         </span>
@@ -173,6 +206,25 @@ export function TimelineOverview({
         ) : null}
       </div>
 
+      <div className="analysis-mode-toggle" aria-label="分析模式">
+        <button
+          type="button"
+          className={analysisMode === "single" ? "active" : ""}
+          aria-pressed={analysisMode === "single"}
+          onClick={() => onAnalysisModeChange("single")}
+        >
+          单年度分析
+        </button>
+        <button
+          type="button"
+          className={analysisMode === "range" ? "active" : ""}
+          aria-pressed={analysisMode === "range"}
+          onClick={() => onAnalysisModeChange("range")}
+        >
+          多年度分析
+        </button>
+      </div>
+
       <div
         ref={chartRef}
         className="timeline-overview-chart"
@@ -183,7 +235,7 @@ export function TimelineOverview({
         onPointerCancel={handleBrushEnd}
       >
         {allYearCounts.map(({ year, count }) => {
-          const inRange = year >= selectedYearRange[0] && year <= selectedYearRange[1];
+          const inRange = year >= activeYearRange[0] && year <= activeYearRange[1];
           const selected = year === currentYear;
           const filteredCount = filteredYearCounts.get(year) ?? 0;
           return (
@@ -204,7 +256,11 @@ export function TimelineOverview({
                   suppressClickRef.current = false;
                   return;
                 }
-                onCurrentYearChange(year);
+                if (analysisMode === "range") {
+                  onYearRangeChange([year, year]);
+                } else {
+                  onCurrentYearChange(year);
+                }
               }}
               onKeyDown={(event) => handleYearKeyDown(event, year)}
             >
@@ -224,40 +280,80 @@ export function TimelineOverview({
         })}
       </div>
 
+      {analysisMode === "single" ? (
+        <label
+          className="timeline-current-slider"
+          style={{
+            "--timeline-slot": `${100 / allYearCounts.length}%`,
+            "--timeline-half-slot": `${50 / allYearCounts.length}%`,
+          } as CSSProperties}
+        >
+          <span className="timeline-current-slider-track">
+            <input
+              type="range"
+              min={allYearRange[0]}
+              max={allYearRange[1]}
+              value={currentYear}
+              onChange={(event) => onCurrentYearChange(Number(event.target.value))}
+              aria-label="拖动选择地图年份"
+            />
+          </span>
+          <span className="timeline-current-slider-labels">
+            <span>{allYearRange[0]}</span>
+            <output aria-label="拉条当前年份">{currentYear}</output>
+            <span>{allYearRange[1]}</span>
+          </span>
+        </label>
+      ) : (
+        <div
+          className="timeline-range-slider"
+          style={{
+            "--timeline-slot": `${100 / allYearCounts.length}%`,
+            "--timeline-half-slot": `${50 / allYearCounts.length}%`,
+            "--range-start": `${rangeStartPercent}%`,
+            "--range-end": `${rangeEndPercent}%`,
+          } as CSSProperties}
+        >
+          <div className="timeline-range-slider-track" aria-hidden="true">
+            <span />
+          </div>
+          <input
+            type="range"
+            min={allYearRange[0]}
+            max={allYearRange[1]}
+            value={selectedYearRange[0]}
+            onChange={(event) => updateRangeStart(Number(event.target.value))}
+            aria-label="拖动选择起始年份"
+          />
+          <input
+            type="range"
+            min={allYearRange[0]}
+            max={allYearRange[1]}
+            value={selectedYearRange[1]}
+            onChange={(event) => updateRangeEnd(Number(event.target.value))}
+            aria-label="拖动选择结束年份"
+          />
+          <div className="timeline-range-slider-labels">
+            <span>{allYearRange[0]}</span>
+            <output aria-label="拉条年份范围">
+              {selectedYearRange[0]}–{selectedYearRange[1]}
+            </output>
+            <span>{allYearRange[1]}</span>
+          </div>
+        </div>
+      )}
+
       <div className="timeline-overview-controls">
-        <div className="timeline-range-inputs" aria-label="年份窗口输入">
-          <label>
-            起始年
-            <input
-              type="number"
-              min={allYearRange[0]}
-              max={allYearRange[1]}
-              value={selectedYearRange[0]}
-              onChange={(event) =>
-                onYearRangeChange(
-                  updateYearRangeBoundary(selectedYearRange, "start", Number(event.target.value), allYearRange),
-                )}
-            />
-          </label>
-          <label>
-            结束年
-            <input
-              type="number"
-              min={allYearRange[0]}
-              max={allYearRange[1]}
-              value={selectedYearRange[1]}
-              onChange={(event) =>
-                onYearRangeChange(
-                  updateYearRangeBoundary(selectedYearRange, "end", Number(event.target.value), allYearRange),
-                )}
-            />
-          </label>
+        <div className="timeline-mode-summary" aria-live="polite">
+          {analysisMode === "range"
+            ? `地图显示 ${selectedYearRange[0]}–${selectedYearRange[1]} 年范围内事件`
+            : `地图显示 ${currentYear} 年事件`}
         </div>
         <div className="timeline-playback-controls">
           <button
             className="icon-control-button"
             type="button"
-            disabled={previousPlayableYear === null}
+            disabled={analysisMode === "range" || previousPlayableYear === null}
             onClick={() => previousPlayableYear !== null && onCurrentYearChange(previousPlayableYear)}
             title="上一个有事件的年份"
           >
@@ -266,7 +362,7 @@ export function TimelineOverview({
           <button
             className={isPlaying ? "icon-control-button active" : "icon-control-button"}
             type="button"
-            disabled={playableYears.length < 2}
+            disabled={analysisMode === "range" || playableYears.length < 2}
             aria-pressed={isPlaying}
             onClick={() => {
               if (!isPlaying && nextPlayableYear === null && playableYears.length > 0) {
@@ -281,7 +377,7 @@ export function TimelineOverview({
           <button
             className="icon-control-button"
             type="button"
-            disabled={nextPlayableYear === null}
+            disabled={analysisMode === "range" || nextPlayableYear === null}
             onClick={() => nextPlayableYear !== null && onCurrentYearChange(nextPlayableYear)}
             title="下一个有事件的年份"
           >
@@ -289,7 +385,11 @@ export function TimelineOverview({
           </button>
           <label className="timeline-speed-control">
             <span>速度</span>
-            <select value={playbackDelay} onChange={(event) => setPlaybackDelay(Number(event.target.value))}>
+            <select
+              value={playbackDelay}
+              disabled={analysisMode === "range"}
+              onChange={(event) => setPlaybackDelay(Number(event.target.value))}
+            >
               <option value={2200}>慢</option>
               <option value={1400}>标准</option>
               <option value={800}>快</option>

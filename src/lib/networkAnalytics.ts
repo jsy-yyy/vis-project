@@ -1,4 +1,5 @@
 import type { Battle } from "../types/domain";
+import { canonicalParticipantId } from "./participantNormalization";
 
 export type ParticipantNetworkNode = {
   id: string;
@@ -11,6 +12,7 @@ export type ParticipantNetworkNode = {
 
 export type ParticipantNetworkSide = "winner" | "loser" | "mixed" | "neutral";
 export type ParticipantNetworkRelation = "ally" | "opponent" | "cooccurrence";
+export type ParticipantRelativeRelation = ParticipantNetworkRelation | "current" | "unrelated";
 
 export type ParticipantNetworkEdge = {
   source: string;
@@ -59,15 +61,17 @@ function getParticipantRoles(battle: Battle, participantIds: string[]) {
   const participantIdSet = new Set(participantIds);
 
   for (const actor of battle.actors ?? []) {
-    if (!actor.networkEligible || !participantIdSet.has(actor.id)) {
+    const actorId = canonicalParticipantId(actor.id, battle.year);
+
+    if (!actor.networkEligible || !participantIdSet.has(actorId)) {
       continue;
     }
 
     // Winner/loser roles are more analytically useful than the generic
     // participant role, so they replace a participant fallback when available.
-    const existingRole = roles.get(actor.id);
+    const existingRole = roles.get(actorId);
     if (!existingRole || existingRole === "participant") {
-      roles.set(actor.id, actor.role);
+      roles.set(actorId, actor.role);
     }
   }
 
@@ -84,6 +88,38 @@ function getDominantRelation(edge: Pick<ParticipantNetworkEdge, "allyWeight" | "
   }
 
   return "cooccurrence";
+}
+
+export function getRelativeParticipantRelations(
+  participantId: string | null,
+  edges: ParticipantNetworkEdge[],
+): Map<string, ParticipantRelativeRelation> {
+  const relations = new Map<string, ParticipantRelativeRelation>();
+
+  if (!participantId) {
+    return relations;
+  }
+
+  relations.set(participantId, "current");
+
+  for (const edge of edges) {
+    if (edge.source !== participantId && edge.target !== participantId) {
+      continue;
+    }
+
+    const neighborId = edge.source === participantId ? edge.target : edge.source;
+    relations.set(neighborId, edge.relation);
+  }
+
+  return relations;
+}
+
+export function filterNetworkBattlesByWar(battles: Battle[], warId: string | null): Battle[] {
+  if (!warId) {
+    return battles;
+  }
+
+  return battles.filter((battle) => battle.warId === warId);
 }
 
 function getDominantSide(winnerCount: number, loserCount: number, neutralCount: number): ParticipantNetworkSide {
@@ -112,7 +148,12 @@ export function buildParticipantNetwork(
   const edgeCounts = new Map<string, ParticipantNetworkEdge>();
 
   for (const battle of battles) {
-    const participantIds = Array.from(new Set(battle.participants)).sort();
+    const participantIds = Array.from(
+      new Set(
+        battle.participants.map((participantId) =>
+          canonicalParticipantId(participantId, battle.year)),
+      ),
+    ).sort();
     const participantRoles = getParticipantRoles(battle, participantIds);
 
     for (const participantId of participantIds) {
@@ -139,6 +180,9 @@ export function buildParticipantNetwork(
       for (let rightIndex = leftIndex + 1; rightIndex < participantIds.length; rightIndex += 1) {
         const source = participantIds[leftIndex];
         const target = participantIds[rightIndex];
+        if (source === target) {
+          continue;
+        }
         const key = `${source}::${target}`;
         const existingEdge = edgeCounts.get(key);
         const relation = getEdgeRelation(participantRoles.get(source), participantRoles.get(target));

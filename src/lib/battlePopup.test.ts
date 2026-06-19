@@ -69,11 +69,33 @@ describe("battle popup model", () => {
     expect(resolveHistoricalFlag("Russia (Soviet Union)", 1916)?.id).toBe("russia");
     expect(resolveHistoricalFlag("Russia (Soviet Union)", 1942)?.id).toBe("ussr");
     expect(resolveHistoricalFlag("Turkey (Ottoman Empire)", 1915)?.id).toBe("ottoman");
+    expect(resolveHistoricalFlag("Turkey", 1915)?.id).toBe("ottoman");
     expect(resolveHistoricalFlag("Turkey", 1930)?.id).toBe("turkey");
     expect(resolveHistoricalFlag("Germany", 1914)?.id).toBe("germany-empire");
-    expect(resolveHistoricalFlag("Germany", 1941)).toBeNull();
+    expect(resolveHistoricalFlag("Germany", 1941)?.id).toBe("germany-empire");
     expect(resolveHistoricalFlag("Germany", 1950)?.id).toBe("germany-modern");
-    expect(resolveHistoricalFlag("Spain", 1930)).toMatchObject({ id: "spain", isoCode: "es" });
+    expect(resolveHistoricalFlag("Russia", 1941)?.id).toBe("ussr");
+    expect(resolveHistoricalFlag("Russia", 1992)?.id).toBe("russia");
+    expect(resolveHistoricalFlag("USSR", 1918)?.id).toBe("ussr");
+    expect(resolveHistoricalFlag("Ottoman Empire", 1974)?.id).toBe("ottoman");
+    expect(resolveHistoricalFlag("Austria-Hungary", 1921)?.id).toBe("austria-hungary");
+    expect(resolveHistoricalFlag("Spain", 1930)).toMatchObject({
+      id: "spain",
+      isoCode: "es",
+      src: "/flags/iso/es.svg",
+    });
+    expect(resolveHistoricalFlag("Serbia", 1913)).toMatchObject({
+      id: "serbia",
+      src: "/flags/iso/rs.svg",
+    });
+    expect(resolveHistoricalFlag("Bulgaria", 1913)).toMatchObject({
+      id: "bulgaria",
+      src: "/flags/iso/bg.svg",
+    });
+    expect(resolveHistoricalFlag("Greece", 1913)).toMatchObject({
+      id: "greece",
+      src: "/flags/iso/gr.svg",
+    });
     expect(resolveHistoricalFlag("Transvaal", 1900)?.id).toBe("transvaal");
     expect(resolveHistoricalFlag("Orange Free State", 1900)?.id).toBe("orange-free-state");
     expect(resolveHistoricalFlag("North Vietnam", 1968)).toMatchObject({ id: "north-vietnam", isoCode: "vn" });
@@ -83,7 +105,7 @@ describe("battle popup model", () => {
   it("chooses the most common historical flag in a filtered participant range", () => {
     expect(resolveDominantHistoricalFlag("Yugoslavia", [1941, 1942, 1946, 1960, 1991])?.id)
       .toBe("yugoslavia-socialist");
-    expect(resolveDominantHistoricalFlag("Germany", [1914, 1916, 1941])?.id)
+    expect(resolveDominantHistoricalFlag("Germany", [1914, 1916, 1941, 1944])?.id)
       .toBe("germany-empire");
     expect(resolveDominantHistoricalFlag("Tibet", [1904])).toBeNull();
   });

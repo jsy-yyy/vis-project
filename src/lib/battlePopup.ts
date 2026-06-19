@@ -9,7 +9,7 @@ export type PopupSide = {
 
 export type FlagAsset = {
   id: string;
-  src?: string;
+  src: string;
   isoCode?: string;
   label: string;
 };
@@ -70,8 +70,18 @@ const flagAssets = {
 } satisfies Record<string, FlagAsset>;
 
 function createIsoFlag(id: string, isoCode: string, label: string): FlagAsset {
-  return { id, isoCode, label };
+  return { id, isoCode, src: `/flags/iso/${isoCode}.svg`, label };
 }
+
+const explicitHistoricalFlags = new Map<string, FlagAsset>([
+  ["ussr", flagAssets.ussr],
+  ["soviet", flagAssets.ussr],
+  ["soviets", flagAssets.ussr],
+  ["ottoman", flagAssets.ottoman],
+  ["ottoman empire", flagAssets.ottoman],
+  ["austria hungary", flagAssets.austriaHungary],
+  ["austro hungarian", flagAssets.austriaHungary],
+]);
 
 const flagRules: FlagRule[] = [
   { keys: ["austria hungary", "austro hungarian"], from: 1867, to: 1918, flag: flagAssets.austriaHungary },
@@ -80,15 +90,15 @@ const flagRules: FlagRule[] = [
   { keys: ["china", "chinese"], from: 1949, flag: flagAssets.chinaPrC },
   { keys: ["france", "french"], flag: flagAssets.france },
   { keys: ["germany prussia", "prussia"], to: 1918, flag: flagAssets.prussia },
-  { keys: ["german empire", "germany", "german", "germans"], to: 1918, flag: flagAssets.germanyEmpire },
+  { keys: ["german empire", "germany", "german", "germans"], to: 1948, flag: flagAssets.germanyEmpire },
   { keys: ["germany", "german", "germans", "german federal republic", "german democratic republic"], from: 1949, flag: flagAssets.germanyModern },
   { keys: ["italy", "italian", "italians", "kingdom of italy", "italy sardinia"], to: 1946, flag: flagAssets.italyKingdom },
   { keys: ["italy", "italian", "italians"], from: 1946, flag: flagAssets.italy },
   { keys: ["japan", "japanese"], flag: flagAssets.japan },
-  { keys: ["ottoman", "ottoman empire", "turkey ottoman empire"], to: 1922, flag: flagAssets.ottoman },
+  { keys: ["ottoman", "ottoman empire", "turkey", "turkish", "turks", "turkey ottoman empire"], to: 1922, flag: flagAssets.ottoman },
   { keys: ["turkey", "turkish", "turks"], from: 1923, flag: flagAssets.turkey },
   { keys: ["russia", "russian", "russians", "russia soviet union"], to: 1917, flag: flagAssets.russia },
-  { keys: ["ussr", "soviet", "soviets", "russia soviet union"], from: 1922, to: 1991, flag: flagAssets.ussr },
+  { keys: ["russia", "russian", "russians", "ussr", "soviet", "soviets", "russia soviet union"], from: 1922, to: 1991, flag: flagAssets.ussr },
   { keys: ["russia", "russian", "russians"], from: 1991, flag: flagAssets.russia },
   { keys: ["united kingdom", "british", "britain"], flag: flagAssets.uk },
   { keys: ["united states", "united states of america", "america", "american", "americans", "usa"], flag: flagAssets.usa },
@@ -159,6 +169,15 @@ const flagRules: FlagRule[] = [
   { keys: ["vietnam"], from: 1976, flag: createIsoFlag("vietnam", "vn", "Vietnam flag") },
 ];
 
+const neutralFlagFallbacks = new Map<string, FlagAsset>([
+  ["russia", flagAssets.russia],
+  ["russian", flagAssets.russia],
+  ["russians", flagAssets.russia],
+  ["turkey", flagAssets.turkey],
+  ["turkish", flagAssets.turkey],
+  ["turks", flagAssets.turkey],
+]);
+
 export function escapeHtml(value: string | number) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -189,10 +208,19 @@ function isYearInRule(year: number, rule: FlagRule) {
 
 export function resolveHistoricalFlag(name: string, year: number): FlagAsset | null {
   const keys = getFlagKeys(name);
+  const explicitFlag = keys.map((key) => explicitHistoricalFlags.get(key)).find(Boolean);
+  if (explicitFlag) {
+    return explicitFlag;
+  }
+
   const rule = flagRules.find(
     (item) => isYearInRule(year, item) && keys.some((key) => item.keys.includes(key)),
   );
-  return rule?.flag ?? null;
+  if (rule) {
+    return rule.flag;
+  }
+
+  return keys.map((key) => neutralFlagFallbacks.get(key)).find(Boolean) ?? null;
 }
 
 export function resolveDominantHistoricalFlag(name: string, years: number[]): FlagAsset | null {
@@ -278,9 +306,7 @@ export function getBattlePopupModel(battle: Battle): BattlePopupModel {
 
 function getSideHtml(side: PopupSide, label: string) {
   const visual = side.flag
-    ? side.flag.src
-      ? `<img class="battle-popup-flag" src="${escapeHtml(side.flag.src)}" alt="${escapeHtml(side.flag.label)}" />`
-      : `<span class="battle-popup-flag country-flag flag-iso-${escapeHtml(side.flag.isoCode ?? "")}" role="img" aria-label="${escapeHtml(side.flag.label)}"></span>`
+    ? `<img class="battle-popup-flag" src="${escapeHtml(side.flag.src)}" alt="${escapeHtml(side.flag.label)}" />`
     : `<span class="battle-popup-flag-fallback" aria-hidden="true">${escapeHtml(side.fallbackCode)}</span>`;
 
   return `
