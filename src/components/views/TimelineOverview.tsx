@@ -2,8 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { BarChart3, Pause, Play, RotateCcw, SkipBack, SkipForward, X } from "lucide-react";
 import { getAdjacentPlayableYear, getPlayableYears } from "../../lib/battleInteraction";
+import type { CaseStudyAnalysis } from "../../lib/caseStudyAnalytics";
 import { getYearlyEventCounts } from "../../lib/timelineAnalytics";
-import { normalizeYearRange } from "../../lib/timelineRange";
+import {
+  getClosestYearRangeBoundary,
+  getDraggedYearRange,
+  normalizeYearRange,
+  resolveOverlappingRangeBoundary,
+  updateYearRangeBoundary,
+  type YearRangeBoundary,
+} from "../../lib/timelineRange";
 import type { AnalysisMode, Battle, Participant, YearRange } from "../../types/domain";
 
 type TimelineOverviewProps = {
@@ -19,9 +27,12 @@ type TimelineOverviewProps = {
   selectedYearRange: YearRange;
   currentYear: number;
   yearAdjustmentMessage: string | null;
+  caseStudies: CaseStudyAnalysis[];
   onAnalysisModeChange: (mode: AnalysisMode) => void;
   onYearRangeChange: (range: YearRange) => void;
   onCurrentYearChange: (year: number) => void;
+  onApplyCaseStudy: (analysis: CaseStudyAnalysis) => void;
+  onFocusCaseStudyParticipant: (analysis: CaseStudyAnalysis) => void;
   onClearParticipant: () => void;
   onClearBattle: () => void;
   onReset: () => void;
@@ -41,20 +52,31 @@ export function TimelineOverview({
   selectedYearRange,
   currentYear,
   yearAdjustmentMessage,
+  caseStudies,
   onAnalysisModeChange,
   onYearRangeChange,
   onCurrentYearChange,
+  onApplyCaseStudy,
+  onFocusCaseStudyParticipant,
   onClearParticipant,
   onClearBattle,
   onReset,
   onStatusChange,
 }: TimelineOverviewProps) {
   const chartRef = useRef<HTMLDivElement | null>(null);
+  const rangeTrackRef = useRef<HTMLDivElement | null>(null);
   const brushAnchorRef = useRef<number | null>(null);
   const brushMovedRef = useRef(false);
   const suppressClickRef = useRef(false);
+  const rangeDragRef = useRef<{
+    originYear: number;
+    fixedYear: number;
+    boundary: YearRangeBoundary | null;
+    moved: boolean;
+  } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackDelay, setPlaybackDelay] = useState(1400);
+  const [selectedCaseStudyId, setSelectedCaseStudyId] = useState(caseStudies[0]?.id ?? "");
   const allYearCounts = useMemo(
     () => getYearlyEventCounts(baselineBattles, allYearRange),
     [allYearRange, baselineBattles],
@@ -75,6 +97,8 @@ export function TimelineOverview({
   const selectedParticipantName = selectedParticipant
     ? participants.find((participant) => participant.id === selectedParticipant)?.name ?? selectedParticipant
     : null;
+  const selectedCaseStudy =
+    caseStudies.find((analysis) => analysis.id === selectedCaseStudyId) ?? caseStudies[0] ?? null;
 
   useEffect(() => {
     setIsPlaying(false);
@@ -156,12 +180,98 @@ export function TimelineOverview({
     }
   }
 
-  function updateRangeStart(year: number) {
-    onYearRangeChange([Math.min(year, selectedYearRange[1]), selectedYearRange[1]]);
+  function getYearFromRangePointer(event: ReactPointerEvent<HTMLElement>) {
+    const bounds = rangeTrackRef.current?.getBoundingClientRect();
+    if (!bounds || bounds.width === 0) {
+      return selectedYearRange[0];
+    }
+
+    const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
+    return Math.round(allYearRange[0] + ratio * (allYearRange[1] - allYearRange[0]));
   }
 
-  function updateRangeEnd(year: number) {
-    onYearRangeChange([selectedYearRange[0], Math.max(year, selectedYearRange[0])]);
+  function beginRangeDrag(
+    event: ReactPointerEvent<HTMLElement>,
+    requestedBoundary?: YearRangeBoundary,
+  ) {
+    const pointerYear = getYearFromRangePointer(event);
+    const boundary = requestedBoundary ?? getClosestYearRangeBoundary(selectedYearRange, pointerYear);
+    const fixedYear =
+      boundary === "start"
+        ? selectedYearRange[1]
+        : boundary === "end"
+          ? selectedYearRange[0]
+          : selectedYearRange[0];
+
+    rangeDragRef.current = {
+      originYear: pointerYear,
+      fixedYear,
+      boundary,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function moveRangeDrag(event: ReactPointerEvent<HTMLElement>) {
+    const drag = rangeDragRef.current;
+    if (!drag || !event.currentTarget.hasPointerCapture(event.pointerId)) {
+      return;
+    }
+
+    const pointerYear = getYearFromRangePointer(event);
+    const boundary =
+      drag.boundary ?? resolveOverlappingRangeBoundary(drag.originYear, pointerYear);
+    if (!boundary) {
+      return;
+    }
+
+    drag.boundary = boundary;
+    drag.moved = drag.moved || pointerYear !== drag.originYear;
+    onYearRangeChange(getDraggedYearRange(drag.fixedYear, pointerYear, allYearRange));
+  }
+
+  function endRangeDrag(event: ReactPointerEvent<HTMLElement>) {
+    const drag = rangeDragRef.current;
+    if (!drag) {
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (!drag.moved && drag.boundary) {
+      onYearRangeChange(
+        getDraggedYearRange(drag.fixedYear, getYearFromRangePointer(event), allYearRange),
+      );
+    }
+    rangeDragRef.current = null;
+  }
+
+  function handleRangeHandleKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    boundary: YearRangeBoundary,
+  ) {
+    const currentValue = boundary === "start" ? selectedYearRange[0] : selectedYearRange[1];
+    let nextValue: number | null = null;
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+      nextValue = currentValue - 1;
+    } else if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+      nextValue = currentValue + 1;
+    } else if (event.key === "Home") {
+      nextValue = allYearRange[0];
+    } else if (event.key === "End") {
+      nextValue = allYearRange[1];
+    }
+
+    if (nextValue === null) {
+      return;
+    }
+
+    event.preventDefault();
+    onYearRangeChange(updateYearRangeBoundary(selectedYearRange, boundary, nextValue, allYearRange));
   }
 
   return (
@@ -314,25 +424,59 @@ export function TimelineOverview({
             "--range-end": `${rangeEndPercent}%`,
           } as CSSProperties}
         >
-          <div className="timeline-range-slider-track" aria-hidden="true">
-            <span />
+          <div
+            ref={rangeTrackRef}
+            className="timeline-range-slider-interaction"
+            aria-label="拖动选择多年度分析范围"
+            onPointerDown={beginRangeDrag}
+            onPointerMove={moveRangeDrag}
+            onPointerUp={endRangeDrag}
+            onPointerCancel={endRangeDrag}
+          >
+            <div className="timeline-range-slider-track" aria-hidden="true">
+              <span />
+            </div>
+            <button
+              type="button"
+              className="timeline-range-handle start"
+              style={{ left: `${rangeStartPercent}%` }}
+              aria-label="拖动选择起始年份"
+              aria-valuemin={allYearRange[0]}
+              aria-valuemax={allYearRange[1]}
+              aria-valuenow={selectedYearRange[0]}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                beginRangeDrag(
+                  event,
+                  selectedYearRange[0] === selectedYearRange[1] ? undefined : "start",
+                );
+              }}
+              onPointerMove={moveRangeDrag}
+              onPointerUp={endRangeDrag}
+              onPointerCancel={endRangeDrag}
+              onKeyDown={(event) => handleRangeHandleKeyDown(event, "start")}
+            />
+            <button
+              type="button"
+              className="timeline-range-handle end"
+              style={{ left: `${rangeEndPercent}%` }}
+              aria-label="拖动选择结束年份"
+              aria-valuemin={allYearRange[0]}
+              aria-valuemax={allYearRange[1]}
+              aria-valuenow={selectedYearRange[1]}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                beginRangeDrag(
+                  event,
+                  selectedYearRange[0] === selectedYearRange[1] ? undefined : "end",
+                );
+              }}
+              onPointerMove={moveRangeDrag}
+              onPointerUp={endRangeDrag}
+              onPointerCancel={endRangeDrag}
+              onKeyDown={(event) => handleRangeHandleKeyDown(event, "end")}
+            />
           </div>
-          <input
-            type="range"
-            min={allYearRange[0]}
-            max={allYearRange[1]}
-            value={selectedYearRange[0]}
-            onChange={(event) => updateRangeStart(Number(event.target.value))}
-            aria-label="拖动选择起始年份"
-          />
-          <input
-            type="range"
-            min={allYearRange[0]}
-            max={allYearRange[1]}
-            value={selectedYearRange[1]}
-            onChange={(event) => updateRangeEnd(Number(event.target.value))}
-            aria-label="拖动选择结束年份"
-          />
           <div className="timeline-range-slider-labels">
             <span>{allYearRange[0]}</span>
             <output aria-label="拉条年份范围">
@@ -400,6 +544,32 @@ export function TimelineOverview({
           </button>
         </div>
       </div>
+      {selectedCaseStudy ? (
+        <div className="timeline-case-presets" aria-label="案例分析预设">
+          <label>
+            <span>案例预设</span>
+            <select
+              value={selectedCaseStudy.id}
+              onChange={(event) => setSelectedCaseStudyId(event.target.value)}
+            >
+              {caseStudies.map((analysis) => (
+                <option key={analysis.id} value={analysis.id}>
+                  {analysis.label} · {analysis.range[0]}–{analysis.range[1]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span>
+            峰值 {selectedCaseStudy.peakYear} · {selectedCaseStudy.peakCount} 条事件
+          </span>
+          <button type="button" onClick={() => onApplyCaseStudy(selectedCaseStudy)}>
+            应用窗口
+          </button>
+          <button type="button" onClick={() => onFocusCaseStudyParticipant(selectedCaseStudy)}>
+            聚焦核心参战方
+          </button>
+        </div>
+      ) : null}
       {yearAdjustmentMessage ? <p className="timeline-adjustment-note">{yearAdjustmentMessage}</p> : null}
     </section>
   );

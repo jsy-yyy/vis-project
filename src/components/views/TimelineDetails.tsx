@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ListTree } from "lucide-react";
 import { getAdjacentBattleId } from "../../lib/battleInteraction";
-import { summarizeBattles } from "../../lib/battleAnalytics";
-import { getTimelinePeriodComparison, getYearlyEventSummary } from "../../lib/timelineAnalytics";
-import type { AnalysisMode, Battle, Participant, YearRange } from "../../types/domain";
+import { getTimelineChartSummary } from "../../lib/timelineAnalytics";
+import type { AnalysisMode, Battle, YearRange } from "../../types/domain";
 
 type TimelineDetailsProps = {
   baselineBattles: Battle[];
   filteredBattles: Battle[];
-  participants: Participant[];
   selectedBattleId: string | null;
   selectedBattleYear: number | null;
   selectedBattleLocked: boolean;
@@ -26,7 +24,6 @@ const eventListPageSize = 24;
 export function TimelineDetails({
   baselineBattles,
   filteredBattles,
-  participants,
   selectedBattleId,
   selectedBattleYear,
   selectedBattleLocked,
@@ -39,25 +36,24 @@ export function TimelineDetails({
 }: TimelineDetailsProps) {
   const [expanded, setExpanded] = useState(false);
   const [visibleEventCount, setVisibleEventCount] = useState(eventListLimit);
-  const participantNames = useMemo(
-    () => new Map(participants.map((participant) => [participant.id, participant.name])),
-    [participants],
-  );
   const currentYearBattles = useMemo(
     () =>
       (analysisMode === "range" ? filteredBattles : filteredBattles.filter((battle) => battle.year === currentYear))
         .sort((left, right) => left.year - right.year || left.name.localeCompare(right.name)),
     [analysisMode, currentYear, filteredBattles],
   );
-  const rangeSummary = useMemo(() => summarizeBattles(filteredBattles), [filteredBattles]);
-  const currentYearSummary = useMemo(
-    () => getYearlyEventSummary(baselineBattles, filteredBattles, currentYear),
-    [baselineBattles, currentYear, filteredBattles],
+  const chartSummary = useMemo(
+    () =>
+      getTimelineChartSummary(
+        baselineBattles,
+        analysisMode,
+        currentYear,
+        selectedYearRange,
+        allYearRange,
+      ),
+    [allYearRange, analysisMode, baselineBattles, currentYear, selectedYearRange],
   );
-  const periodComparison = useMemo(
-    () => getTimelinePeriodComparison(filteredBattles, currentYear, selectedYearRange),
-    [currentYear, filteredBattles, selectedYearRange],
-  );
+  const maxTimeCount = Math.max(1, ...chartSummary.bars.map((bar) => bar.count));
   const previousBattleId = getAdjacentBattleId(currentYearBattles, selectedBattleId, -1);
   const nextBattleId = getAdjacentBattleId(currentYearBattles, selectedBattleId, 1);
   const visibleCurrentYearBattles = currentYearBattles.slice(0, visibleEventCount);
@@ -73,13 +69,6 @@ export function TimelineDetails({
   useEffect(() => {
     setVisibleEventCount(eventListLimit);
   }, [analysisMode, currentYear, filteredBattles, selectedYearRange]);
-
-  function formatRange(range: YearRange | null) {
-    if (!range) {
-      return "无可用区间";
-    }
-    return range[0] === range[1] ? String(range[0]) : `${range[0]}–${range[1]}`;
-  }
 
   return (
     <section
@@ -110,51 +99,66 @@ export function TimelineDetails({
 
       {expanded ? (
         <div id="timeline-details-content" className="timeline-details-content">
-          <div className="timeline-analysis-grid">
-            <article className="timeline-analysis-card">
-              <h3>{activeLabel}摘要</h3>
-              <dl>
-                <div>
-                  <dt>{analysisMode === "range" ? "范围内事件" : "窗口内全部事件"}</dt>
-                  <dd>{analysisMode === "range" ? baselineBattles.length : currentYearSummary.totalCount}</dd>
+          <article className="timeline-chart-card timeline-temporal-chart">
+            <header>
+              <div>
+                <h3>{chartSummary.title}</h3>
+                <p>
+                  {chartSummary.mode === "year-type"
+                    ? "柱高表示年度事件量，颜色表示事件类型。"
+                    : chartSummary.mode === "month"
+                      ? "按事件日期汇总月份分布。"
+                      : "当前数据缺少可用月份，回退展示本年度类型分布。"}
+                </p>
+              </div>
+              <span>{currentYearBattles.length} 条当前结果</span>
+            </header>
+            {chartSummary.bars.length > 0 ? (
+              <>
+                <div
+                  className={`timeline-stacked-bars ${chartSummary.mode}`}
+                  role="img"
+                  aria-label={`${activeLabel}${chartSummary.title}`}
+                >
+                  {chartSummary.bars.map((bar) => (
+                    <div
+                      key={bar.key}
+                      className={bar.current ? "timeline-stacked-bar current" : "timeline-stacked-bar"}
+                      data-total={bar.count}
+                      title={`${bar.label}: ${bar.count} 条事件`}
+                    >
+                      <strong>{bar.count}</strong>
+                      <span
+                        className="timeline-stack"
+                        style={{ height: `${Math.max(3, (bar.count / maxTimeCount) * 100)}%` }}
+                      >
+                        {bar.segments.map((segment) => (
+                          <i
+                            key={segment.key}
+                            className={`timeline-stack-segment segment-${chartSummary.legend.indexOf(segment.label) % 6}`}
+                            data-count={segment.count}
+                            title={`${bar.label} · ${segment.label}: ${segment.count}`}
+                            style={{ flexGrow: segment.count }}
+                          />
+                        ))}
+                      </span>
+                      <small>{bar.label}</small>
+                    </div>
+                  ))}
                 </div>
-                <div><dt>符合当前参战方</dt><dd>{currentYearBattles.length}</dd></div>
-                <div>
-                  <dt>主要参战方</dt>
-                  <dd>
-                    {(analysisMode === "range" ? rangeSummary.topParticipants : currentYearSummary.topParticipants).length > 0
-                      ? (analysisMode === "range" ? rangeSummary.topParticipants : currentYearSummary.topParticipants)
-                          .map(([id, count]) => `${participantNames.get(id) ?? id} (${count})`)
-                          .join(", ")
-                      : "没有匹配的参战方"}
-                  </dd>
+                <div className="timeline-stack-legend" aria-label="图表图例">
+                  {chartSummary.legend.map((label, index) => (
+                    <span key={label}>
+                      <i className={`segment-${index % 6}`} />
+                      {label}
+                    </span>
+                  ))}
                 </div>
-              </dl>
-            </article>
-            <article className="timeline-analysis-card">
-              <h3>{analysisMode === "range" ? "范围概览" : "前后阶段对比"}</h3>
-              <dl>
-                {analysisMode === "range" ? (
-                  <>
-                    <div><dt>{selectedYearRange[0]}</dt><dd>起始年</dd></div>
-                    <div><dt>{formatRange(rangeSummary.yearRange)}</dt><dd>{rangeSummary.totalBattles} 条</dd></div>
-                    <div><dt>{selectedYearRange[1]}</dt><dd>结束年</dd></div>
-                  </>
-                ) : (
-                  <>
-                    <div><dt>{formatRange(periodComparison.previousRange)}</dt><dd>{periodComparison.previousCount} 条</dd></div>
-                    <div><dt>{currentYear}</dt><dd>{currentYearSummary.filteredCount} 条</dd></div>
-                    <div><dt>{formatRange(periodComparison.nextRange)}</dt><dd>{periodComparison.nextCount} 条</dd></div>
-                  </>
-                )}
-              </dl>
-              <p>
-                {analysisMode === "range"
-                  ? "当前列表展示所选年份范围内的全部匹配事件。"
-                  : "基于当前年份窗口和参战方状态，对比当前年份前后各五年。"}
-              </p>
-            </article>
-          </div>
+              </>
+            ) : (
+              <div className="compact-empty">当前范围暂无可视化事件数据。</div>
+            )}
+          </article>
 
           <div className="timeline-event-heading">
             <h3>{activeLabel}事件</h3>

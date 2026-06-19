@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "./components/layout/AppHeader";
 import { AppShell } from "./components/layout/AppShell";
-import { CaseStudyInsightsPanel } from "./components/panels/CaseStudyInsightsPanel";
-import { DetailPanel } from "./components/panels/DetailPanel";
+import { DetailVisualPanel } from "./components/panels/DetailVisualPanel";
 import { StatisticsPanel } from "./components/panels/StatisticsPanel";
 import { MapView } from "./components/views/MapView";
 import { NetworkView } from "./components/views/NetworkView";
@@ -77,14 +76,6 @@ export default function App() {
   const effectiveYearRange = useMemo<YearRange>(
     () => (analysisMode === "range" ? selectedYearRange : [currentYear, currentYear]),
     [analysisMode, currentYear, selectedYearRange],
-  );
-  const timeWindowBattles = useMemo(
-    () =>
-      filterBattles(battles, {
-        selectedYearRange: effectiveYearRange,
-        selectedParticipant: null,
-      }),
-    [battles, effectiveYearRange],
   );
   const scopeBattles = useMemo(
     () =>
@@ -458,9 +449,19 @@ export default function App() {
             selectedYearRange={selectedYearRange}
             currentYear={currentYear}
             yearAdjustmentMessage={yearAdjustmentMessage}
+            caseStudies={caseStudies}
             onAnalysisModeChange={updateAnalysisMode}
             onYearRangeChange={updateYearRange}
             onCurrentYearChange={updateCurrentYear}
+            onApplyCaseStudy={(analysis) =>
+              applyCaseStudy(analysis.range, analysis.label, analysis.peakYear)}
+            onFocusCaseStudyParticipant={(analysis) =>
+              focusCaseStudyParticipant(
+                analysis.primaryParticipantId,
+                analysis.range,
+                analysis.peakYear,
+                analysis.label,
+              )}
             onClearParticipant={() => updateParticipantFilter(null)}
             onClearBattle={() => updateSelectedBattle(null)}
             onReset={resetFilters}
@@ -483,9 +484,8 @@ export default function App() {
             onResetFilters={resetFilters}
           />
           <TimelineDetails
-            baselineBattles={timeWindowBattles}
+            baselineBattles={timelineOverviewBattles}
             filteredBattles={resultBattles}
-            participants={participants}
             selectedBattleId={selectedBattleId}
             selectedBattleYear={selectedBattle?.year ?? null}
             selectedBattleLocked={selectedBattleLocked}
@@ -522,7 +522,7 @@ export default function App() {
             selectedParticipant={selectedParticipant}
             onParticipantSelect={updateParticipantFilter}
           />
-          <DetailPanel
+          <DetailVisualPanel
             battle={selectedBattle}
             participants={participants}
             emptyMessage={detailStatusMessage}
@@ -536,18 +536,6 @@ export default function App() {
             onToggleLock={toggleSelectedBattleLock}
             onClearSelection={() => updateSelectedBattle(null)}
             onJumpToEvent={jumpToSelectedBattle}
-          />
-          <CaseStudyInsightsPanel
-            cases={caseStudies}
-            onApplyCaseStudy={(analysis) =>
-              applyCaseStudy(analysis.range, analysis.label, analysis.peakYear)}
-            onFocusParticipant={(analysis) =>
-              focusCaseStudyParticipant(
-                analysis.primaryParticipantId,
-                analysis.range,
-                analysis.peakYear,
-                analysis.label,
-              )}
           />
           <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
             {liveStatusMessage}
