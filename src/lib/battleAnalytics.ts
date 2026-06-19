@@ -62,6 +62,31 @@ export function summarizeBattles(battles: Battle[]): BattleSummary {
   };
 }
 
+export type CompactTypeEntry = {
+  type: string;
+  count: number;
+  percentage: number;
+};
+
+export function getCompactTypeBreakdown(
+  battlesByType: Record<string, number>,
+  visibleLimit = 4,
+): CompactTypeEntry[] {
+  const ranked = Object.entries(battlesByType)
+    .filter(([, count]) => count > 0)
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+  const total = ranked.reduce((sum, [, count]) => sum + count, 0);
+  const visible = ranked.slice(0, visibleLimit);
+  const otherCount = ranked.slice(visibleLimit).reduce((sum, [, count]) => sum + count, 0);
+  const entries = otherCount > 0 ? [...visible, ["其他", otherCount] as [string, number]] : visible;
+
+  return entries.map(([type, count]) => ({
+    type,
+    count,
+    percentage: total > 0 ? (count / total) * 100 : 0,
+  }));
+}
+
 export function getSelectedBattle(battles: Battle[], selectedBattleId: string | null): Battle | null {
   if (!selectedBattleId) {
     return null;

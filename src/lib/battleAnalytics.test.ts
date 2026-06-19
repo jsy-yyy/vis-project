@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { filterBattles, getClosestBattleYear, summarizeBattles } from "./battleAnalytics";
+import {
+  filterBattles,
+  getClosestBattleYear,
+  getCompactTypeBreakdown,
+  summarizeBattles,
+} from "./battleAnalytics";
 
 const battles = [
   {
@@ -79,6 +84,23 @@ describe("battle analytics", () => {
     expect(summary.topParticipants).toEqual([
       ["france", 1],
       ["prussia", 1],
+    ]);
+  });
+
+  it("keeps the top four event types and combines the remainder", () => {
+    expect(getCompactTypeBreakdown({
+      Land: 50,
+      Sea: 25,
+      Air: 15,
+      Massacre: 5,
+      OtherA: 3,
+      OtherB: 2,
+    })).toEqual([
+      { type: "Land", count: 50, percentage: 50 },
+      { type: "Sea", count: 25, percentage: 25 },
+      { type: "Air", count: 15, percentage: 15 },
+      { type: "Massacre", count: 5, percentage: 5 },
+      { type: "其他", count: 5, percentage: 5 },
     ]);
   });
 });
