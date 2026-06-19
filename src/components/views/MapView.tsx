@@ -33,7 +33,8 @@ type LandCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry>;
 
 type MapHeatCell = {
   key: string;
-  bounds: L.LatLngBoundsExpression;
+  latitude: number;
+  longitude: number;
   count: number;
 };
 
@@ -48,30 +49,30 @@ type CountryHighlight = {
 
 const baseMarkerStyle: L.CircleMarkerOptions = {
   radius: 7,
-  color: "#101214",
+  color: "#0c1013",
   weight: 2,
   fillOpacity: 0.88,
 };
 
 const selectedMarkerStyle: L.CircleMarkerOptions = {
   radius: 10,
-  color: "#fff3bf",
+  color: "#fff7e6",
   weight: 3,
-  fillColor: "#d6b66a",
+  fillColor: "#f1b86b",
   fillOpacity: 1,
 };
 
-const eventTypePalette = [
-  "#d47b5d",
-  "#4f9cff",
-  "#8fd19e",
-  "#d6b66a",
-  "#c98fd1",
-  "#86c5c7",
-  "#f0a36b",
-  "#aeb6ad",
-];
-const mapHeatGridSize = 5;
+const eventTypeColors: Record<string, string> = {
+  land: "#ff8066",
+  sea: "#69b7ff",
+  air: "#b99cff",
+  "land and sea": "#5ed3c6",
+  "land and air": "#f1b86b",
+  "sea and air": "#78d3f2",
+  "air and sea": "#78d3f2",
+  massacre: "#f0525f",
+};
+const mapHeatGridSize = 8;
 
 const countryAliasByKey: Record<string, string | string[]> = {
   america: "United States of America",
@@ -451,16 +452,8 @@ function getBattlePopup(battle: Battle) {
   `;
 }
 
-function hashString(value: string) {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) % 997;
-  }
-  return hash;
-}
-
 function getEventTypeColor(type = "冲突事件") {
-  return eventTypePalette[hashString(type) % eventTypePalette.length];
+  return eventTypeColors[type.trim().toLowerCase()] ?? "#9aa7ad";
 }
 
 function getBattleStyle(battle: Battle, selected: boolean, highlighted: boolean): L.CircleMarkerOptions {
@@ -468,9 +461,9 @@ function getBattleStyle(battle: Battle, selected: boolean, highlighted: boolean)
     return {
       ...baseMarkerStyle,
       radius: selected ? 11 : 9,
-      color: selected ? "#fff3bf" : "#ffffff",
+      color: selected ? "#fff7e6" : "#ffffff",
       weight: selected ? 4 : 3,
-      fillColor: "#ef4444",
+      fillColor: "#f0525f",
       fillOpacity: 1,
     };
   }
@@ -491,8 +484,8 @@ function getBoundaryStyle(
 
   if (statename && highlight.selected.has(statename)) {
     return {
-      color: "#fff3bf",
-      fillColor: "#d6b66a",
+      color: "#fff7e6",
+      fillColor: "#f1b86b",
       fillOpacity: 0.72,
       opacity: 1,
       weight: 3,
@@ -501,8 +494,8 @@ function getBoundaryStyle(
 
   if (statename && highlight.internalConflict.has(statename)) {
     return {
-      color: "#fffbeb",
-      fillColor: "#f59e0b",
+      color: "#fff7e6",
+      fillColor: "#f1b86b",
       fillOpacity: 0.64,
       opacity: 1,
       weight: 2.4,
@@ -511,8 +504,8 @@ function getBoundaryStyle(
 
   if (statename && highlight.winnerMain.has(statename)) {
     return {
-      color: "#dbeafe",
-      fillColor: "#2563eb",
+      color: "#e6f3ff",
+      fillColor: "#3988d5",
       fillOpacity: 0.62,
       opacity: 1,
       weight: 2,
@@ -521,8 +514,8 @@ function getBoundaryStyle(
 
   if (statename && highlight.winnerAllies.has(statename)) {
     return {
-      color: "#bfdbfe",
-      fillColor: "#60a5fa",
+      color: "#d8ecff",
+      fillColor: "#69b7ff",
       fillOpacity: 0.46,
       opacity: 0.95,
       weight: 1.6,
@@ -531,8 +524,8 @@ function getBoundaryStyle(
 
   if (statename && highlight.loserMain.has(statename)) {
     return {
-      color: "#fee2e2",
-      fillColor: "#dc2626",
+      color: "#ffe7e2",
+      fillColor: "#d94f5c",
       fillOpacity: 0.62,
       opacity: 1,
       weight: 2,
@@ -541,8 +534,8 @@ function getBoundaryStyle(
 
   if (statename && highlight.loserAllies.has(statename)) {
     return {
-      color: "#fed7aa",
-      fillColor: "#fb923c",
+      color: "#ffe6df",
+      fillColor: "#ff8066",
       fillOpacity: 0.46,
       opacity: 0.95,
       weight: 1.6,
@@ -551,8 +544,8 @@ function getBoundaryStyle(
 
   const opacity = snapshotYear < 1945 ? 0.18 : 0.14;
   return {
-    color: "#60706a",
-    fillColor: "#94a79f",
+    color: "#65737b",
+    fillColor: "#4d5a61",
     fillOpacity: opacity,
     opacity: 0.58,
     weight: 1,
@@ -561,10 +554,10 @@ function getBoundaryStyle(
 
 function getLandStyle(): L.PathOptions {
   return {
-    color: "#708078",
-    fillColor: "#202a25",
-    fillOpacity: 0.82,
-    opacity: 0.7,
+    color: "#536169",
+    fillColor: "#20272b",
+    fillOpacity: 0.94,
+    opacity: 0.78,
     weight: 1,
   };
 }
@@ -609,20 +602,12 @@ function getMapHeatCells(battles: Battle[]) {
   }
 
   return Array.from(cells.entries())
-    .map(([key, cell]): MapHeatCell => {
-      const [latCell, lngCell] = key.split(":").map(Number);
-      const south = latCell * mapHeatGridSize - 90;
-      const west = lngCell * mapHeatGridSize - 180;
-
-      return {
-        key,
-        bounds: [
-          [south, west],
-          [south + mapHeatGridSize, west + mapHeatGridSize],
-        ],
-        count: cell.count,
-      };
-    })
+    .map(([key, cell]): MapHeatCell => ({
+      key,
+      latitude: cell.latitudeSum / cell.count,
+      longitude: cell.longitudeSum / cell.count,
+      count: cell.count,
+    }))
     .sort((left, right) => right.count - left.count);
 }
 
@@ -657,7 +642,7 @@ export function MapView({
       : selectedSnapshot;
   const effectiveSnapshotLabel =
     allConflictGroupMode
-      ? "全部冲突组：事件密度热力图"
+      ? "全部冲突组：8°网格密度气泡"
       : effectiveSnapshot === "off"
       ? "历史边界已关闭"
       : `CShapes 快照 ${cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? effectiveSnapshot}`;
@@ -959,11 +944,13 @@ export function MapView({
 
     for (const cell of heatCells) {
       const intensity = cell.count / maxHeatCellCount;
-      const heatMarker = L.rectangle(cell.bounds, {
-        color: "rgba(255, 243, 191, 0.08)",
-        weight: 0.5,
-        fillColor: "#d47b5d",
-        fillOpacity: 0.05 + Math.sqrt(intensity) * 0.62,
+      const heatMarker = L.circleMarker([cell.latitude, cell.longitude], {
+        radius: 3 + Math.sqrt(intensity) * 17,
+        color: "rgba(255, 192, 177, 0.54)",
+        weight: 1,
+        fillColor: "#ff8066",
+        fillOpacity: 0.12 + Math.sqrt(intensity) * 0.5,
+        className: "density-bubble",
         interactive: false,
       });
 
@@ -1050,7 +1037,7 @@ export function MapView({
   }, [battles, countryBoundsLookup, countryLookup, selectedBattleId]);
 
   return (
-    <section className="view-panel map-panel">
+    <section id="map-view" className="view-panel map-panel">
       <div className="section-heading">
         <MapPinned size={18} />
         <h2>地图视图</h2>
@@ -1074,7 +1061,7 @@ export function MapView({
                 disabled={allConflictGroupMode}
                 onChange={(event) => setSelectedSnapshot(event.target.value)}
               >
-                {allConflictGroupMode ? <option value="heatmap">事件密度热力图</option> : null}
+                {allConflictGroupMode ? <option value="heatmap">8°网格密度气泡</option> : null}
                 {cshapesSnapshotOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -1090,17 +1077,17 @@ export function MapView({
             {allConflictGroupMode ? (
               <>
                 <div>
-                  <span style={{ "--legend-color": "#d47b5d" } as React.CSSProperties} />
-                  <strong>事件密度越高颜色越深</strong>
+                  <span style={{ "--legend-color": "#ff8066" } as React.CSSProperties} />
+                  <strong>气泡越大、颜色越亮，事件越集中</strong>
                 </div>
                 <div>
-                  <span style={{ "--legend-color": "#fff3bf" } as React.CSSProperties} />
+                  <span style={{ "--legend-color": "#f1b86b" } as React.CSSProperties} />
                   <strong>小点仍可点击查看事件</strong>
                 </div>
               </>
             ) : activeCountryHighlight.internalConflict.size > 0 ? (
               <div>
-                <span style={{ "--legend-color": "#f59e0b" } as React.CSSProperties} />
+                <span style={{ "--legend-color": "#f1b86b" } as React.CSSProperties} />
                 <strong>内部冲突</strong>
               </div>
             ) : null}

@@ -1,7 +1,8 @@
 node_modules/
 .cache/
 dist/
-doc/
+doc/*
+!doc/ITERATION_2026-06-18.md
 
 *.pdf
 *.aux

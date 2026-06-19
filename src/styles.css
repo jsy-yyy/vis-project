@@ -2,29 +2,29 @@
   color-scheme: dark;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #17191b;
-  color: #eef0ea;
+  background: #0e1215;
+  color: #f1f5f3;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --bg: #17191b;
-  --surface: #202326;
-  --surface-2: #282c2f;
-  --line: #3a3f42;
-  --text-muted: #aeb6ad;
-  --text-soft: #d6dacf;
-  --green: #8fd19e;
-  --gold: #d6b66a;
-  --rust: #d47b5d;
-  --cyan: #86c5c7;
-  --ink: #101214;
-  --state-selected: #d6b66a;
-  --state-filtered: #8fd19e;
-  --state-context: #86c5c7;
-  --side-winner: #60a5fa;
-  --side-loser: #dc2626;
-  --side-mixed: #d6b66a;
-  --state-neutral: #aeb6ad;
+  --bg: #0e1215;
+  --surface: #171c20;
+  --surface-2: #20272c;
+  --line: #303a40;
+  --text-muted: #9ca9af;
+  --text-soft: #e6ece9;
+  --green: #5ed3c6;
+  --gold: #f1b86b;
+  --rust: #ff8066;
+  --cyan: #78d3f2;
+  --ink: #0b0f12;
+  --state-selected: #f1b86b;
+  --state-filtered: #5ed3c6;
+  --state-context: #78d3f2;
+  --side-winner: #69b7ff;
+  --side-loser: #f0525f;
+  --side-mixed: #f1b86b;
+  --state-neutral: #9aa7ad;
 }
 
 * {
@@ -35,10 +35,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(143, 209, 158, 0.08), transparent 32rem),
-    radial-gradient(circle at top right, rgba(214, 182, 106, 0.08), transparent 28rem),
-    var(--bg);
+  background: linear-gradient(180deg, #151c1f 0, var(--bg) 30rem);
 }
 
 button,
@@ -74,7 +71,7 @@ button {
   justify-content: space-between;
   gap: 1.5rem;
   padding: 1.4rem clamp(1rem, 3vw, 2rem) 1rem;
-  border-bottom: 1px solid rgba(238, 240, 234, 0.08);
+  border-bottom: 1px solid rgba(230, 236, 233, 0.08);
 }
 
 .eyebrow {
@@ -122,13 +119,50 @@ h1 {
   padding: 0.35rem 0.65rem;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(32, 35, 38, 0.78);
+  background: rgba(23, 28, 32, 0.86);
   color: var(--text-soft);
   white-space: nowrap;
 }
 
 .app-main {
   padding: 1rem clamp(1rem, 3vw, 2rem) 1.5rem;
+}
+
+.view-navigation {
+  position: sticky;
+  top: 0.65rem;
+  z-index: 900;
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 1rem;
+  padding: 0.3rem;
+  border: 1px solid rgba(230, 236, 233, 0.11);
+  border-radius: 8px;
+  background: rgba(11, 15, 18, 0.92);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+}
+
+.view-navigation a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.view-navigation a:hover,
+.view-navigation a:focus-visible {
+  background: rgba(94, 211, 198, 0.12);
+  color: var(--green);
+  outline: none;
 }
 
 .control-band {
@@ -140,16 +174,60 @@ h1 {
 .side-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(32, 35, 38, 0.9);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+  background: rgba(23, 28, 32, 0.94);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
 }
 
 .filter-panel {
+  display: block;
+  padding: 0.85rem;
+}
+
+.filter-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.filter-summary {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-toggle-button {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(32, 39, 44, 0.82);
+  color: var(--text-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.filter-toggle-button svg {
+  transition: transform 160ms ease;
+}
+
+.filter-panel.expanded .filter-toggle-button svg {
+  transform: rotate(180deg);
+}
+
+.filter-fields {
   display: grid;
   grid-template-columns: auto minmax(12rem, 1fr) minmax(14rem, 0.8fr) minmax(12rem, 1fr) auto;
   gap: 0.75rem;
   align-items: end;
-  padding: 0.85rem;
 }
 
 .panel-title-inline,
@@ -161,8 +239,10 @@ h1 {
 
 .panel-title-inline {
   align-self: center;
+  flex: 0 0 auto;
   color: var(--text-soft);
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .field {
@@ -179,7 +259,7 @@ h1 {
   height: 2.3rem;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #151719;
+  background: #0d1215;
   color: var(--text-soft);
   padding: 0 0.65rem;
 }
@@ -205,9 +285,9 @@ h1 {
   justify-content: center;
   gap: 0.4rem;
   height: 2.3rem;
-  border: 1px solid rgba(143, 209, 158, 0.35);
+  border: 1px solid rgba(94, 211, 198, 0.36);
   border-radius: 6px;
-  background: rgba(143, 209, 158, 0.1);
+  background: rgba(94, 211, 198, 0.1);
   color: var(--green);
   font-weight: 800;
 }
@@ -224,9 +304,9 @@ h1 {
   justify-content: center;
   min-height: 2.1rem;
   padding: 0.35rem 0.65rem;
-  border: 1px solid rgba(214, 182, 106, 0.34);
+  border: 1px solid rgba(241, 184, 107, 0.34);
   border-radius: 6px;
-  background: rgba(214, 182, 106, 0.08);
+  background: rgba(241, 184, 107, 0.08);
   color: var(--gold);
   font-size: 0.78rem;
   font-weight: 800;
@@ -251,7 +331,7 @@ h1 {
 
 .map-panel {
   grid-column: 1 / -1;
-  min-height: calc(100vh - 2rem);
+  min-height: auto;
 }
 
 .timeline-panel,
@@ -270,6 +350,7 @@ h1 {
 .view-panel,
 .side-panel {
   padding: 1rem;
+  scroll-margin-top: 4.5rem;
 }
 
 .sidebar-grid {
@@ -277,6 +358,10 @@ h1 {
   grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
   align-content: start;
   gap: 1rem;
+}
+
+.sidebar-grid > .side-panel {
+  align-self: start;
 }
 
 .section-heading {
@@ -313,23 +398,23 @@ h1 {
 
 .map-stage {
   position: relative;
-  min-height: calc(100vh - 8rem);
+  min-height: clamp(32rem, 65vh, 42rem);
 }
 
 .leaflet-map-shell {
   position: relative;
-  min-height: calc(100vh - 8rem);
+  min-height: clamp(32rem, 65vh, 42rem);
   overflow: hidden;
-  border: 1px solid rgba(238, 240, 234, 0.08);
+  border: 1px solid rgba(230, 236, 233, 0.08);
   border-radius: 8px;
-  background: #121416;
+  background: #0a0f12;
 }
 
 .leaflet-map {
   width: 100%;
   height: 100%;
-  min-height: calc(100vh - 8rem);
-  background: #121416;
+  min-height: clamp(32rem, 65vh, 42rem);
+  background: #0a0f12;
 }
 
 .leaflet-container {
@@ -374,7 +459,7 @@ h1 {
   place-items: center;
   border: 1px dashed var(--line);
   border-radius: 8px;
-  background: rgba(16, 18, 20, 0.82);
+  background: rgba(11, 15, 18, 0.86);
   color: var(--text-muted);
   text-align: center;
 }
@@ -389,9 +474,9 @@ h1 {
   gap: 0.55rem;
   max-width: min(24rem, calc(100% - 2rem));
   padding: 0.55rem 0.75rem;
-  border: 1px solid rgba(214, 182, 106, 0.24);
+  border: 1px solid rgba(241, 184, 107, 0.26);
   border-radius: 8px;
-  background: rgba(16, 18, 20, 0.8);
+  background: rgba(11, 15, 18, 0.84);
   color: var(--text-soft);
   transform: translateX(-50%);
   opacity: 0.82;
@@ -400,8 +485,8 @@ h1 {
 }
 
 .map-year-feedback.active {
-  border-color: rgba(214, 182, 106, 0.78);
-  box-shadow: 0 0 0 4px rgba(214, 182, 106, 0.13);
+  border-color: rgba(241, 184, 107, 0.78);
+  box-shadow: 0 0 0 4px rgba(241, 184, 107, 0.12);
   opacity: 1;
 }
 
@@ -427,7 +512,7 @@ h1 {
   padding: 0.7rem;
   border: 1px solid rgba(238, 240, 234, 0.12);
   border-radius: 8px;
-  background: rgba(16, 18, 20, 0.84);
+  background: rgba(11, 15, 18, 0.88);
   color: var(--text-soft);
   backdrop-filter: blur(10px);
 }
@@ -985,6 +1070,50 @@ h1 {
   align-items: stretch;
 }
 
+.network-view-switcher {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(230, 236, 233, 0.12);
+  border-radius: 7px;
+  background: rgba(16, 18, 20, 0.46);
+}
+
+.network-view-switcher button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.network-view-switcher button.active {
+  background: rgba(143, 209, 158, 0.13);
+  color: var(--green);
+  box-shadow: inset 0 0 0 1px rgba(143, 209, 158, 0.3);
+}
+
+.network-single-view {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.network-single-view .network-svg {
+  max-height: 34rem;
+}
+
+.network-single-view .participant-heatmap-svg {
+  min-height: 30rem;
+  max-height: 38rem;
+}
+
 .network-stage {
   overflow: hidden;
   border: 1px solid rgba(238, 240, 234, 0.12);
@@ -1353,7 +1482,7 @@ g:focus-visible .participant-heatmap-rect {
 }
 
 @media (max-width: 1120px) {
-  .filter-panel,
+  .filter-fields,
   .primary-grid,
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -1372,6 +1501,43 @@ g:focus-visible .participant-heatmap-rect {
 
   .header-metrics {
     justify-content: flex-start;
+  }
+
+  .view-navigation {
+    top: 0.35rem;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .view-navigation a {
+    flex: 1 1 0;
+    padding-inline: 0.35rem;
+  }
+
+  .filter-panel-heading {
+    margin-bottom: 0;
+  }
+
+  .filter-toggle-button {
+    display: inline-flex;
+    width: 2rem;
+    padding-inline: 0.35rem;
+  }
+
+  .filter-toggle-button span {
+    display: none;
+  }
+
+  .filter-panel.expanded .filter-panel-heading {
+    margin-bottom: 0.75rem;
+  }
+
+  .filter-panel.collapsed .filter-fields {
+    display: none;
+  }
+
+  .filter-summary {
+    text-align: right;
   }
 
   .range-fields,
@@ -1441,6 +1607,14 @@ g:focus-visible .participant-heatmap-rect {
 
   .network-visual-grid {
     grid-template-columns: 1fr;
+  }
+
+  .network-view-switcher {
+    display: flex;
+  }
+
+  .network-view-switcher button {
+    flex: 1 1 0;
   }
 
   .network-detail-grid,
@@ -1554,4 +1728,109 @@ g:focus-visible .participant-heatmap-rect {
   .timeline-chart-frame {
     grid-template-columns: 2.6rem minmax(0, 1fr);
   }
+}
+
+/* 2026-06-18 visual refresh: neutral graphite surfaces with restrained semantic accents. */
+.leaflet-map-shell,
+.leaflet-map {
+  background: #0a0f12;
+}
+
+.boundary-control,
+.map-legend,
+.map-list {
+  border-color: rgba(230, 236, 233, 0.11);
+  background: rgba(11, 15, 18, 0.9);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.2);
+}
+
+.boundary-control select {
+  background: #0d1215;
+}
+
+.list-link,
+.timeline-item,
+.case-study-list button {
+  background: rgba(32, 39, 44, 0.82);
+}
+
+.list-link:hover,
+.timeline-item:hover,
+.case-study-list button:hover {
+  border-color: rgba(94, 211, 198, 0.42);
+  background: rgba(38, 48, 53, 0.92);
+}
+
+.map-selection,
+.list-link.active,
+.timeline-item.active,
+.network-node.active {
+  border-color: rgba(241, 184, 107, 0.7);
+  background: rgba(241, 184, 107, 0.11);
+}
+
+.density-bubble {
+  filter: drop-shadow(0 0 5px rgba(255, 128, 102, 0.2));
+}
+
+.timeline-year-control {
+  border-color: rgba(94, 211, 198, 0.26);
+  background: rgba(94, 211, 198, 0.055);
+}
+
+.timeline-chart-frame,
+.timeline-analysis-card,
+.network-detail-card,
+.case-study-notes,
+.network-heatmap-panel,
+.stat-grid div,
+.actor-list li {
+  border-color: rgba(230, 236, 233, 0.09);
+  background: rgba(11, 15, 18, 0.38);
+}
+
+.timeline-bar-fill.baseline {
+  background: var(--cyan);
+  opacity: 0.5;
+}
+
+.timeline-bar-fill.filtered {
+  background: var(--green);
+}
+
+.network-view-switcher,
+.network-stage {
+  border-color: rgba(230, 236, 233, 0.11);
+  background: rgba(11, 15, 18, 0.44);
+}
+
+.network-view-switcher button.active {
+  background: rgba(94, 211, 198, 0.13);
+  box-shadow: inset 0 0 0 1px rgba(94, 211, 198, 0.3);
+}
+
+.participant-heatmap-value {
+  fill: #071210;
+}
+
+.participant-heatmap-rect {
+  stroke: rgba(11, 15, 18, 0.76);
+}
+
+.network-svg-node circle {
+  stroke: #0b0f12;
+}
+
+.network-svg-node:hover circle,
+.network-svg-node:focus circle,
+.network-svg-node.active circle {
+  stroke: #fff7e6;
+}
+
+.bar-shell {
+  background: rgba(230, 236, 233, 0.09);
+}
+
+.bar-fill {
+  background: linear-gradient(90deg, var(--green), var(--cyan));
 }

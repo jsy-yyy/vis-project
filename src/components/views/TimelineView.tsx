@@ -147,7 +147,7 @@ export function TimelineView({
   }
 
   return (
-    <section className="view-panel timeline-panel">
+    <section id="timeline-view" className="view-panel timeline-panel">
       <div className="section-heading">
         <BarChart3 size={18} />
         <h2>时间轴视图</h2>

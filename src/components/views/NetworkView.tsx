@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Share2 } from "lucide-react";
+import { Grid3X3, Share2, Waypoints } from "lucide-react";
 import { buildParticipantNetwork } from "../../lib/networkAnalytics";
 import type {
   ParticipantNetworkEdge,
@@ -192,11 +192,11 @@ function buildParticipantHeatmap(
 
 function getHeatmapFill(count: number, maxCount: number) {
   if (count === 0) {
-    return "rgba(238, 240, 234, 0.05)";
+    return "rgba(241, 245, 244, 0.045)";
   }
 
   const intensity = Math.sqrt(count / maxCount);
-  return `rgba(214, 182, 106, ${0.18 + intensity * 0.74})`;
+  return `rgba(94, 211, 198, ${0.14 + intensity * 0.78})`;
 }
 
 function getParticipantDetail(
@@ -340,6 +340,7 @@ export function NetworkView({
   onResetFilters,
 }: NetworkViewProps) {
   const [inspectedEdgeKey, setInspectedEdgeKey] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<"network" | "matrix">("network");
   const participantNames = useMemo(
     () => new Map(participants.map((participant) => [participant.id, participant.name])),
     [participants],
@@ -414,7 +415,7 @@ export function NetworkView({
   }, [edges, inspectedEdgeKey]);
 
   return (
-    <section className="view-panel network-panel">
+    <section id="network-view" className="view-panel network-panel">
       <div className="section-heading">
         <Share2 size={18} />
         <h2>参战方共现网络</h2>
@@ -454,8 +455,30 @@ export function NetworkView({
         </div>
       ) : (
         <>
-          <div className="network-visual-grid">
-            <div className="network-stage">
+          <div className="network-view-switcher" role="tablist" aria-label="关系视图模式">
+            <button
+              className={activeView === "network" ? "active" : ""}
+              type="button"
+              role="tab"
+              aria-selected={activeView === "network"}
+              onClick={() => setActiveView("network")}
+            >
+              <Waypoints size={16} />
+              关系网络
+            </button>
+            <button
+              className={activeView === "matrix" ? "active" : ""}
+              type="button"
+              role="tab"
+              aria-selected={activeView === "matrix"}
+              onClick={() => setActiveView("matrix")}
+            >
+              <Grid3X3 size={16} />
+              事件矩阵
+            </button>
+          </div>
+          <div className="network-visual-grid network-single-view">
+            {activeView === "network" ? <div className="network-stage">
               <svg
                 className="network-svg"
                 viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
@@ -569,8 +592,8 @@ export function NetworkView({
                   })}
                 </g>
               </svg>
-            </div>
-            {participantHeatmap.rows.length > 0 && participantHeatmap.columns.length > 0 ? (
+            </div> : null}
+            {activeView === "matrix" && participantHeatmap.rows.length > 0 && participantHeatmap.columns.length > 0 ? (
               <div className="network-heatmap-panel">
                 <div className="network-heatmap-heading">
                   <h3>参战方-冲突组事件热力图</h3>
@@ -659,8 +682,8 @@ export function NetworkView({
                   )}
                   <defs>
                     <linearGradient id="participant-heatmap-scale" x1="0%" x2="100%" y1="0%" y2="0%">
-                      <stop offset="0%" stopColor="rgba(214, 182, 106, 0.12)" />
-                      <stop offset="100%" stopColor="rgba(214, 182, 106, 0.92)" />
+                      <stop offset="0%" stopColor="rgba(94, 211, 198, 0.1)" />
+                      <stop offset="100%" stopColor="rgba(94, 211, 198, 0.94)" />
                     </linearGradient>
                   </defs>
                   <rect
