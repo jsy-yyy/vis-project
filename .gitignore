@@ -1,6 +1,8 @@
 node_modules/
 .cache/
 dist/
+playwright-report/
+test-results/
 doc/*
 !doc/ITERATION_2026-06-18.md
 

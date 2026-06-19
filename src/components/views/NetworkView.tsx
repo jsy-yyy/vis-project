@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
-import { Grid3X3, Maximize2, RotateCcw, Share2, Waypoints, ZoomIn, ZoomOut } from "lucide-react";
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+  WheelEvent as ReactWheelEvent,
+} from "react";
+import { Grid3X3, Maximize2, RotateCcw, Search, Share2, Waypoints, X, ZoomIn, ZoomOut } from "lucide-react";
 import { resolveDominantHistoricalFlag } from "../../lib/battlePopup";
 import { buildParticipantNetwork } from "../../lib/networkAnalytics";
 import type {
@@ -404,6 +408,9 @@ export function NetworkView({
   const [activeView, setActiveView] = useState<"network" | "matrix">("network");
   const [viewport, setViewport] = useState<NetworkViewport>(defaultViewport);
   const [tooltip, setTooltip] = useState<NetworkTooltip | null>(null);
+  const [participantSearch, setParticipantSearch] = useState("");
+  const [participantOptionsOpen, setParticipantOptionsOpen] = useState(false);
+  const [activeParticipantOption, setActiveParticipantOption] = useState(0);
   const networkStageRef = useRef<HTMLDivElement | null>(null);
   const panStartRef = useRef<{ clientX: number; clientY: number; x: number; y: number } | null>(null);
   const participantNames = useMemo(
@@ -451,6 +458,15 @@ export function NetworkView({
   );
   const highlightedParticipantKey = highlightedParticipantIds.slice().sort().join("|");
   const selectedParticipantName = selectedParticipant ? getParticipantName(selectedParticipant, participantNames) : null;
+  const visibleParticipantOptions = useMemo(() => {
+    const query = participantSearch.trim().toLowerCase();
+    return participants
+      .filter((participant) =>
+        !query ||
+        participant.name.toLowerCase().includes(query) ||
+        participant.id.toLowerCase().includes(query))
+      .slice(0, 12);
+  }, [participantSearch, participants]);
   const focusedNodeIds = useMemo(() => {
     if (!selectionVisible || !selectedParticipant) {
       return new Set(nodes.map((node) => node.id));
@@ -507,6 +523,37 @@ export function NetworkView({
   useEffect(() => {
     setViewport(fitViewport);
   }, [fitViewport, highlightedParticipantKey, selectedParticipant]);
+
+  useEffect(() => {
+    setParticipantSearch(selectedParticipantName ?? "");
+    setParticipantOptionsOpen(false);
+  }, [selectedParticipantName]);
+
+  function selectParticipantOption(participantId: string | null) {
+    onSelectParticipant(participantId);
+    setParticipantOptionsOpen(false);
+    setActiveParticipantOption(0);
+  }
+
+  function handleParticipantSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setParticipantOptionsOpen(true);
+      setActiveParticipantOption((index) => Math.min(index + 1, visibleParticipantOptions.length - 1));
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveParticipantOption((index) => Math.max(index - 1, 0));
+    }
+    if (event.key === "Enter" && participantOptionsOpen && visibleParticipantOptions.length > 0) {
+      event.preventDefault();
+      selectParticipantOption(visibleParticipantOptions[activeParticipantOption]?.id ?? null);
+    }
+    if (event.key === "Escape") {
+      setParticipantOptionsOpen(false);
+      setParticipantSearch(selectedParticipantName ?? "");
+    }
+  }
 
   function showTooltip(
     event: ReactPointerEvent<SVGElement>,
@@ -606,6 +653,66 @@ export function NetworkView({
           <span><i className="edge cooccurrence" />普通共现</span>
           <span><i className="selected" />当前选中参战方</span>
         </div>
+      </div>
+      <div className="participant-combobox">
+        <label htmlFor="participant-network-search">聚焦参战方</label>
+        <div className="participant-combobox-control">
+          <Search size={16} />
+          <input
+            id="participant-network-search"
+            type="search"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={participantOptionsOpen}
+            aria-controls="participant-network-options"
+            aria-activedescendant={
+              participantOptionsOpen && visibleParticipantOptions[activeParticipantOption]
+                ? `participant-option-${visibleParticipantOptions[activeParticipantOption].id}`
+                : undefined
+            }
+            value={participantSearch}
+            placeholder="搜索国家或历史政权"
+            onFocus={() => setParticipantOptionsOpen(true)}
+            onChange={(event) => {
+              setParticipantSearch(event.target.value);
+              setParticipantOptionsOpen(true);
+              setActiveParticipantOption(0);
+            }}
+            onKeyDown={handleParticipantSearchKeyDown}
+          />
+          {selectedParticipant || participantSearch ? (
+            <button
+              type="button"
+              title="清除参战方选择"
+              onClick={() => {
+                setParticipantSearch("");
+                selectParticipantOption(null);
+              }}
+            >
+              <X size={15} />
+            </button>
+          ) : null}
+        </div>
+        {participantOptionsOpen ? (
+          <ul id="participant-network-options" className="participant-combobox-options" role="listbox">
+            {visibleParticipantOptions.length > 0 ? visibleParticipantOptions.map((participant, index) => (
+              <li
+                id={`participant-option-${participant.id}`}
+                key={participant.id}
+                role="option"
+                aria-selected={participant.id === selectedParticipant}
+                className={index === activeParticipantOption ? "active" : ""}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectParticipantOption(participant.id)}
+              >
+                <span>{participant.name}</span>
+                <small>{participant.id}</small>
+              </li>
+            )) : (
+              <li className="empty" aria-disabled="true">没有匹配的参战方</li>
+            )}
+          </ul>
+        ) : null}
       </div>
       {nodes.length === 0 ? (
         <div className="empty-state empty-state-with-action">

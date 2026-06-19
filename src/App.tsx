@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FilterPanel } from "./components/filters/FilterPanel";
 import { AppHeader } from "./components/layout/AppHeader";
 import { AppShell } from "./components/layout/AppShell";
-import { CaseStudyPanel } from "./components/panels/CaseStudyPanel";
+import { CaseStudyInsightsPanel } from "./components/panels/CaseStudyInsightsPanel";
 import { DetailPanel } from "./components/panels/DetailPanel";
 import { StatisticsPanel } from "./components/panels/StatisticsPanel";
 import { MapView } from "./components/views/MapView";
 import { NetworkView } from "./components/views/NetworkView";
-import { TimelineView } from "./components/views/TimelineView";
+import { TimelineDetails } from "./components/views/TimelineDetails";
+import { TimelineOverview } from "./components/views/TimelineOverview";
 import { useBattleData } from "./hooks/useBattleData";
 import {
   buildSharedAppSearch,
@@ -23,6 +23,7 @@ import {
   getClosestBattleYear,
   summarizeBattles,
 } from "./lib/battleAnalytics";
+import { buildCaseStudyAnalysis, caseStudyDefinitions } from "./lib/caseStudyAnalytics";
 import type { YearRange } from "./types/domain";
 
 export default function App() {
@@ -108,6 +109,10 @@ export default function App() {
     [resultBattles, mapBattles, selectedBattleId],
   );
   const highlightedParticipantIds = selectedBattle?.participants ?? [];
+  const caseStudies = useMemo(
+    () => caseStudyDefinitions.map((definition) => buildCaseStudyAnalysis(battles, definition)),
+    [battles],
+  );
 
   useEffect(() => {
     if (!stateRestoredFromUrl || battles.length === 0) {
@@ -271,7 +276,7 @@ export default function App() {
     setLiveStatusMessage("筛选已重置。");
   }
 
-  function applyCaseStudy(range: YearRange, label: string) {
+  function applyCaseStudy(range: YearRange, label: string, preferredYear?: number) {
     const nextBattles = filterBattles(battles, {
       selectedYearRange: range,
       selectedParticipant: null,
@@ -279,12 +284,29 @@ export default function App() {
 
     setSelectedYearRange(range);
     setSelectedParticipant(null);
-    setCurrentYear(getClosestBattleYear(nextBattles, range[1]));
+    setCurrentYear(getClosestBattleYear(nextBattles, preferredYear ?? range[1]));
     setYearAdjustmentMessage(null);
     setDetailStatusMessage(null);
     setSelectedBattleId(null);
     setSelectedBattleLocked(false);
     setLiveStatusMessage(`已应用案例窗口：${label}。`);
+  }
+
+  function focusCaseStudyParticipant(participantId: string, range: YearRange, peakYear: number, label: string) {
+    const nextBattles = filterBattles(battles, {
+      selectedYearRange: range,
+      selectedParticipant: participantId,
+    });
+
+    setSelectedYearRange(range);
+    setSelectedParticipant(participantId);
+    setCurrentYear(getClosestBattleYear(nextBattles, peakYear));
+    setYearAdjustmentMessage(null);
+    setDetailStatusMessage(null);
+    setSelectedBattleId(null);
+    setSelectedBattleLocked(false);
+    setLiveStatusMessage(`已聚焦案例 ${label} 的核心参战方。`);
+    window.location.hash = "network-view";
   }
 
   function updateParticipantFilter(participantId: string | null) {
@@ -367,19 +389,29 @@ export default function App() {
           currentYear={currentYear}
         />
       }
-      filters={
-        <FilterPanel
-          participants={participants}
-          allYearRange={allYearRange}
-          selectedYearRange={selectedYearRange}
-          selectedParticipant={selectedParticipant}
-          onYearRangeChange={updateYearRange}
-          onParticipantChange={updateParticipantFilter}
-          onReset={resetFilters}
-        />
-      }
       primary={
         <>
+          <TimelineOverview
+            baselineBattles={battles}
+            filteredBattles={resultBattles}
+            participants={participants}
+            selectedParticipant={selectedParticipant}
+            selectedBattle={selectedBattle}
+            selectedBattleLocked={selectedBattleLocked}
+            selectedBattleOutOfScope={Boolean(
+              selectedBattleId && selectedBattleLocked && !selectedBattleScopeStatus.inFilteredScope,
+            )}
+            allYearRange={allYearRange}
+            selectedYearRange={selectedYearRange}
+            currentYear={currentYear}
+            yearAdjustmentMessage={yearAdjustmentMessage}
+            onYearRangeChange={updateYearRange}
+            onCurrentYearChange={updateCurrentYear}
+            onClearParticipant={() => updateParticipantFilter(null)}
+            onClearBattle={() => updateSelectedBattle(null)}
+            onReset={resetFilters}
+            onStatusChange={setLiveStatusMessage}
+          />
           <MapView
             battles={mapBattles}
             selectedBattleId={selectedBattleScopeStatus.inMapYear ? selectedBattleId : null}
@@ -394,7 +426,7 @@ export default function App() {
             }}
             onResetFilters={resetFilters}
           />
-          <TimelineView
+          <TimelineDetails
             baselineBattles={timeWindowBattles}
             filteredBattles={resultBattles}
             participants={participants}
@@ -404,7 +436,6 @@ export default function App() {
             allYearRange={allYearRange}
             selectedYearRange={selectedYearRange}
             currentYear={currentYear}
-            yearAdjustmentMessage={yearAdjustmentMessage}
             onSelectBattle={(battleId) => {
               if (battleId) {
                 focusBattle(battleId, { scrollTo: "map" });
@@ -412,9 +443,7 @@ export default function App() {
                 updateSelectedBattle(null);
               }
             }}
-            onCurrentYearChange={updateCurrentYear}
             onResetFilters={resetFilters}
-            onStatusChange={setLiveStatusMessage}
           />
           <NetworkView
             battles={scopeBattles}
@@ -450,7 +479,18 @@ export default function App() {
             onClearSelection={() => updateSelectedBattle(null)}
             onJumpToEvent={jumpToSelectedBattle}
           />
-          <CaseStudyPanel onApplyCaseStudy={applyCaseStudy} />
+          <CaseStudyInsightsPanel
+            cases={caseStudies}
+            onApplyCaseStudy={(analysis) =>
+              applyCaseStudy(analysis.range, analysis.label, analysis.peakYear)}
+            onFocusParticipant={(analysis) =>
+              focusCaseStudyParticipant(
+                analysis.primaryParticipantId,
+                analysis.range,
+                analysis.peakYear,
+                analysis.label,
+              )}
+          />
           <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
             {liveStatusMessage}
           </div>

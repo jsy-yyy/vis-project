@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { BarChart3, ChartNoAxesCombined, Copy, Map, Share2 } from "lucide-react";
 
 const viewLinks = [
+  { href: "#timeline-overview", label: "时间", icon: BarChart3 },
   { href: "#map-view", label: "地图", icon: Map },
-  { href: "#timeline-view", label: "时间", icon: BarChart3 },
   { href: "#network-view", label: "关系", icon: Share2 },
   { href: "#analysis-view", label: "分析", icon: ChartNoAxesCombined },
 ];
@@ -13,7 +13,7 @@ type ViewNavigationProps = {
 };
 
 export function ViewNavigation({ onCopyLink }: ViewNavigationProps) {
-  const [activeView, setActiveView] = useState(window.location.hash || "#map-view");
+  const [activeView, setActiveView] = useState(window.location.hash || "#timeline-overview");
 
   useEffect(() => {
     const elements = viewLinks

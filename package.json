@@ -9,7 +9,9 @@
     "build:hced": "node scripts/build-hced-conflict-events.mjs",
     "build:cshapes": "node scripts/build-cshapes-snapshots.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "vitest run"
+    "test": "vitest run --exclude e2e/**",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.0.2",
@@ -22,6 +24,7 @@
     "vite": "^8.0.16"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/leaflet": "^1.9.17",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
