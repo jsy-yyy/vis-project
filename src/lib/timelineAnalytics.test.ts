@@ -28,12 +28,11 @@ describe("timeline analytics", () => {
     ]);
   });
 
-  it("summarizes the selected year with conflict groups and deduplicated participants", () => {
+  it("summarizes the selected year with deduplicated participants", () => {
     expect(getYearlyEventSummary(battles, battles, 1940)).toMatchObject({
       year: 1940,
       totalCount: 2,
       filteredCount: 2,
-      topConflictGroups: [["w", 2]],
       topParticipants: [
         ["british", 2],
         ["german", 1],

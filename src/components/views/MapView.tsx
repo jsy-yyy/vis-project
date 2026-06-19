@@ -1,16 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapPinned } from "lucide-react";
+import { ChevronsDown, ChevronsUp, MapPinned, Search } from "lucide-react";
 import type * as GeoJSON from "geojson";
-import type { Battle } from "../../types/domain";
+import {
+  getAdjacentBattleId,
+  getVisibleBattlePage,
+  searchAndSortBattles,
+  type BattleSortKey,
+} from "../../lib/battleInteraction";
+import { escapeHtml, getBattlePopupHtml } from "../../lib/battlePopup";
+import {
+  eventMarkerZoomThreshold,
+  filterBattlesByHeatCell,
+  getHeatCellTargetZoom,
+  getMapHeatCells,
+  getMapLayerMode,
+  shouldAutoFocusBattleSelection,
+  shouldClearHeatCellFocus,
+} from "../../lib/mapHeat";
+import type { Battle, Participant } from "../../types/domain";
 
 type MapViewProps = {
   battles: Battle[];
-  heatmapBattles: Battle[];
   selectedBattleId: string | null;
   currentYear: number;
-  selectedWarId: string | null;
+  participants: Participant[];
   onSelectBattle: (battleId: string | null) => void;
   onResetFilters: () => void;
 };
@@ -30,13 +45,6 @@ type CShapesBoundaryProperties = {
 
 type CShapesBoundaryCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, CShapesBoundaryProperties>;
 type LandCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry>;
-
-type MapHeatCell = {
-  key: string;
-  latitude: number;
-  longitude: number;
-  count: number;
-};
 
 type CountryHighlight = {
   selected: Set<string>;
@@ -72,8 +80,6 @@ const eventTypeColors: Record<string, string> = {
   "air and sea": "#78d3f2",
   massacre: "#f0525f",
 };
-const mapHeatGridSize = 8;
-
 const countryAliasByKey: Record<string, string | string[]> = {
   america: "United States of America",
   american: "United States of America",
@@ -200,18 +206,8 @@ const cshapesSnapshots = [
 
 const cshapesSnapshotOptions: SnapshotOption[] = [
   { value: "auto", label: "自动选择当前年前最近快照" },
-  { value: "off", label: "关闭历史边界" },
   ...cshapesSnapshots.map((snapshot) => ({ value: snapshot.date, label: snapshot.label })),
 ];
-
-function escapeHtml(value: string | number) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 function normalizeCountryKey(value: string) {
   return value
@@ -426,37 +422,16 @@ function getHighlightKey(highlight: CountryHighlight) {
   ].join("::");
 }
 
-function getBattlePopup(battle: Battle) {
-  const time = battle.endDate ? `${battle.startDate ?? battle.year} 至 ${battle.endDate}` : battle.startDate ?? battle.year;
-  const winner = battle.winnerNames?.join(", ") || "未知";
-  const loser = battle.loserNames?.join(", ") || "未知";
-  const participants = battle.participantNames?.join(", ") || "未知";
-  const internalActors =
-    battle.actors
-      ?.filter((actor) => actor.status === "mapped_internal")
-      .map((actor) => actor.mapTarget ? `${actor.name} -> ${actor.mapTarget}` : actor.name)
-      .join(", ") || "";
-
-  return `
-    <div class="battle-popup">
-      <strong>${escapeHtml(battle.name)}</strong>
-      <span>${escapeHtml(time)}</span>
-      <span>${escapeHtml(battle.locationName ?? "未知地点")}</span>
-      <span>${escapeHtml(battle.type ?? "冲突事件")}</span>
-      <span>胜方 winner：${escapeHtml(winner)}</span>
-      <span>败方 loser：${escapeHtml(loser)}</span>
-      <span>参战方 participants：${escapeHtml(participants)}</span>
-      ${internalActors ? `<span>内部行动者 internal actors：${escapeHtml(internalActors)}</span>` : ""}
-      <span>${escapeHtml(battle.result ?? "结果未知")}</span>
-    </div>
-  `;
-}
-
 function getEventTypeColor(type = "冲突事件") {
   return eventTypeColors[type.trim().toLowerCase()] ?? "#9aa7ad";
 }
 
-function getBattleStyle(battle: Battle, selected: boolean, highlighted: boolean): L.CircleMarkerOptions {
+function getBattleStyle(
+  battle: Battle,
+  selected: boolean,
+  highlighted: boolean,
+  pulsing: boolean,
+): L.CircleMarkerOptions {
   if (highlighted) {
     return {
       ...baseMarkerStyle,
@@ -465,6 +440,7 @@ function getBattleStyle(battle: Battle, selected: boolean, highlighted: boolean)
       weight: selected ? 4 : 3,
       fillColor: "#f0525f",
       fillOpacity: 1,
+      className: pulsing ? "battle-marker selected-pulse" : "battle-marker",
     };
   }
 
@@ -472,6 +448,7 @@ function getBattleStyle(battle: Battle, selected: boolean, highlighted: boolean)
     ...(selected ? selectedMarkerStyle : baseMarkerStyle),
     radius: selected ? selectedMarkerStyle.radius : baseMarkerStyle.radius,
     fillColor: selected ? selectedMarkerStyle.fillColor : getEventTypeColor(battle.type),
+    className: pulsing ? "battle-marker selected-pulse" : "battle-marker",
   };
 }
 
@@ -586,37 +563,11 @@ function getFeatureBounds(feature: GeoJSON.Feature<GeoJSON.Geometry>) {
   return L.geoJSON(feature).getBounds();
 }
 
-function getMapHeatCells(battles: Battle[]) {
-  const cells = new Map<string, { latitudeSum: number; longitudeSum: number; count: number }>();
-
-  for (const battle of battles) {
-    const latCell = Math.floor((battle.latitude + 90) / mapHeatGridSize);
-    const lngCell = Math.floor((battle.longitude + 180) / mapHeatGridSize);
-    const key = `${latCell}:${lngCell}`;
-    const cell = cells.get(key) ?? { latitudeSum: 0, longitudeSum: 0, count: 0 };
-
-    cell.latitudeSum += battle.latitude;
-    cell.longitudeSum += battle.longitude;
-    cell.count += 1;
-    cells.set(key, cell);
-  }
-
-  return Array.from(cells.entries())
-    .map(([key, cell]): MapHeatCell => ({
-      key,
-      latitude: cell.latitudeSum / cell.count,
-      longitude: cell.longitudeSum / cell.count,
-      count: cell.count,
-    }))
-    .sort((left, right) => right.count - left.count);
-}
-
 export function MapView({
   battles,
-  heatmapBattles,
   selectedBattleId,
   currentYear,
-  selectedWarId,
+  participants,
   onSelectBattle,
   onResetFilters,
 }: MapViewProps) {
@@ -627,38 +578,56 @@ export function MapView({
   const heatLayerRef = useRef<L.FeatureGroup | null>(null);
   const battleLayerRef = useRef<L.FeatureGroup | null>(null);
   const markerRefs = useRef<Map<string, L.CircleMarker>>(new Map());
+  const lastAutoFocusedBattleIdRef = useRef<string | null>(null);
+  const pendingPopupBattleIdRef = useRef<string | null>(null);
   const [selectedSnapshot, setSelectedSnapshot] = useState("auto");
   const [selectedCountryName, setSelectedCountryName] = useState<string | null>(null);
   const [landCollection, setLandCollection] = useState<LandCollection | null>(null);
   const [boundaryCollection, setBoundaryCollection] = useState<CShapesBoundaryCollection | null>(null);
   const [yearFeedbackActive, setYearFeedbackActive] = useState(false);
-  const allConflictGroupMode = selectedWarId === "all" || selectedWarId === null;
-  const heatCells = useMemo(() => getMapHeatCells(heatmapBattles), [heatmapBattles]);
+  const [eventSearch, setEventSearch] = useState("");
+  const [eventSortKey, setEventSortKey] = useState<BattleSortKey>("name");
+  const [expandedEventList, setExpandedEventList] = useState(false);
+  const [previewBattleId, setPreviewBattleId] = useState<string | null>(null);
+  const [pulseBattleId, setPulseBattleId] = useState<string | null>(null);
+  const [focusedHeatCellKey, setFocusedHeatCellKey] = useState<string | null>(null);
+  const [mapZoom, setMapZoom] = useState(2);
+  const [mapInstanceVersion, setMapInstanceVersion] = useState(0);
+  const participantNames = useMemo(
+    () => new Map(participants.map((participant) => [participant.id, participant.name])),
+    [participants],
+  );
+  const heatCells = useMemo(() => getMapHeatCells(battles), [battles]);
   const maxHeatCellCount = Math.max(1, ...heatCells.map((cell) => cell.count));
-  const effectiveSnapshot = allConflictGroupMode
-    ? "off"
-    : selectedSnapshot === "auto"
-      ? getSnapshotForYear(currentYear).date
-      : selectedSnapshot;
+  const mapLayerMode = getMapLayerMode(mapZoom);
+  const focusedHeatCell = useMemo(
+    () => heatCells.find((cell) => cell.key === focusedHeatCellKey) ?? null,
+    [focusedHeatCellKey, heatCells],
+  );
+  const focusedHeatBattleIds = useMemo(
+    () => new Set(focusedHeatCell?.battleIds ?? []),
+    [focusedHeatCell],
+  );
+  const listBattles = useMemo(
+    () => filterBattlesByHeatCell(battles, focusedHeatCell),
+    [battles, focusedHeatCell],
+  );
+  const effectiveSnapshot =
+    selectedSnapshot === "auto" ? getSnapshotForYear(currentYear).date : selectedSnapshot;
   const effectiveSnapshotLabel =
-    allConflictGroupMode
-      ? "全部冲突组：8°网格密度气泡"
-      : effectiveSnapshot === "off"
-      ? "历史边界已关闭"
-      : `CShapes 快照 ${cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? effectiveSnapshot}`;
+    `密度气泡 + CShapes 快照 ${cshapesSnapshots.find((snapshot) => snapshot.date === effectiveSnapshot)?.label ?? effectiveSnapshot}`;
   const countryLookup = useMemo(() => {
     const features = boundaryCollection?.features ?? [];
-    const snapshotFeatures =
-      effectiveSnapshot === "off"
-        ? features
-        : features.filter((feature) => feature.properties.snapshot_date === effectiveSnapshot);
+    const snapshotFeatures = features.filter(
+      (feature) => feature.properties.snapshot_date === effectiveSnapshot,
+    );
 
     return getCountryLookup(snapshotFeatures.length > 0 ? snapshotFeatures : features);
   }, [boundaryCollection, effectiveSnapshot]);
   const countryBoundsLookup = useMemo(() => {
     const lookup = new Map<string, L.LatLngBounds>();
 
-    if (!boundaryCollection || effectiveSnapshot === "off") {
+    if (!boundaryCollection) {
       return lookup;
     }
 
@@ -701,10 +670,39 @@ export function MapView({
     () => battles.find((battle) => battle.id === selectedBattleId) ?? null,
     [battles, selectedBattleId],
   );
+  const sortedListBattles = useMemo(
+    () => searchAndSortBattles(listBattles, eventSearch, eventSortKey, participantNames),
+    [eventSearch, eventSortKey, listBattles, participantNames],
+  );
+  const visibleListBattles = useMemo(
+    () => getVisibleBattlePage(sortedListBattles, expandedEventList, 8),
+    [expandedEventList, sortedListBattles],
+  );
+  const previousBattleId = getAdjacentBattleId(sortedListBattles, selectedBattleId, -1);
+  const nextBattleId = getAdjacentBattleId(sortedListBattles, selectedBattleId, 1);
 
   useEffect(() => {
     setSelectedCountryName(null);
+    setPreviewBattleId(null);
+    setFocusedHeatCellKey(null);
   }, [battles, currentYear]);
+
+  useEffect(() => {
+    setExpandedEventList(false);
+  }, [eventSearch, eventSortKey, currentYear]);
+
+  useEffect(() => {
+    if (!selectedBattleId) {
+      setPulseBattleId(null);
+      lastAutoFocusedBattleIdRef.current = null;
+      pendingPopupBattleIdRef.current = null;
+      return;
+    }
+
+    setPulseBattleId(selectedBattleId);
+    const timeoutId = window.setTimeout(() => setPulseBattleId(null), 900);
+    return () => window.clearTimeout(timeoutId);
+  }, [selectedBattleId]);
 
   useEffect(() => {
     setYearFeedbackActive(true);
@@ -730,6 +728,9 @@ export function MapView({
   const highlightedCountries = useMemo(
     () => getAllHighlightedCountries(activeCountryHighlight),
     [activeCountryHighlight],
+  );
+  const selectedBattleHasCountrySides = Boolean(
+    selectedBattle && highlightedCountries.size > 0,
   );
   const highlightedBattleIds = useMemo(() => {
     const battleIds = new Set<string>();
@@ -793,7 +794,12 @@ export function MapView({
       return false;
     }
 
-    map.fitBounds(bounds.pad(0.12), {
+    const paddedBounds = bounds.pad(0.12);
+    if (map.getBoundsZoom(paddedBounds, false, L.point(20, 20)) < eventMarkerZoomThreshold) {
+      return false;
+    }
+
+    map.fitBounds(paddedBounds, {
       animate: true,
       duration: 0.55,
       paddingTopLeft: [20, 20],
@@ -807,7 +813,32 @@ export function MapView({
 
   function handleBattleSelect(battle: Battle) {
     setSelectedCountryName(null);
+    focusBattleMarkerLayer(battle);
     onSelectBattle(battle.id);
+  }
+
+  function focusBattleMarkerLayer(battle: Battle) {
+    const map = mapRef.current;
+    lastAutoFocusedBattleIdRef.current = battle.id;
+    pendingPopupBattleIdRef.current = battle.id;
+
+    if (!map) {
+      return;
+    }
+
+    const fittedCountries = fitBattleCountries(battle, { duration: 0.45 });
+    const targetZoom = Math.max(map.getZoom(), eventMarkerZoomThreshold);
+
+    if (!fittedCountries) {
+      setMapZoom(targetZoom);
+      map.setView([battle.latitude, battle.longitude], targetZoom, { animate: true });
+    }
+
+    const marker = markerRefs.current.get(battle.id);
+    if (marker && getMapLayerMode(targetZoom) === "events") {
+      marker.openPopup();
+      pendingPopupBattleIdRef.current = null;
+    }
   }
 
   function handleCountrySelect(statename: string, layer: L.Layer) {
@@ -823,6 +854,31 @@ export function MapView({
         });
       }
     }
+  }
+
+  function handleHeatCellSelect(cell: ReturnType<typeof getMapHeatCells>[number]) {
+    const map = mapRef.current;
+    setFocusedHeatCellKey(cell.key);
+    setExpandedEventList(false);
+
+    if (!map) {
+      return;
+    }
+
+    const bounds = L.latLngBounds(cell.bounds);
+    const targetZoom = getHeatCellTargetZoom(
+      map.getBoundsZoom(bounds.pad(0.08), false, L.point(32, 32)),
+    );
+
+    map.flyTo(bounds.getCenter(), targetZoom, {
+      animate: true,
+      duration: 0.5,
+    });
+  }
+
+  function clearHeatCellFocus() {
+    setFocusedHeatCellKey(null);
+    setExpandedEventList(false);
   }
 
   useEffect(() => {
@@ -890,11 +946,24 @@ export function MapView({
 
     const battleLayer = L.featureGroup().addTo(map);
     const heatLayer = L.featureGroup().addTo(map);
+    const handleZoomEnd = () => {
+      const nextZoom = map.getZoom();
+      setMapZoom(nextZoom);
+
+      if (shouldClearHeatCellFocus(nextZoom)) {
+        setFocusedHeatCellKey(null);
+        setExpandedEventList(false);
+      }
+    };
+
+    map.on("zoomend", handleZoomEnd);
     mapRef.current = map;
     heatLayerRef.current = heatLayer;
     battleLayerRef.current = battleLayer;
+    setMapInstanceVersion((version) => version + 1);
 
     return () => {
+      map.off("zoomend", handleZoomEnd);
       landLayerRef.current?.remove();
       boundaryLayerRef.current?.remove();
       heatLayerRef.current?.remove();
@@ -923,9 +992,9 @@ export function MapView({
     }).addTo(map);
 
     landLayer.bringToBack();
-    heatLayerRef.current?.bringToFront();
     landLayerRef.current = landLayer;
     boundaryLayerRef.current?.bringToFront();
+    heatLayerRef.current?.bringToFront();
     battleLayerRef.current?.bringToFront();
   }, [landCollection]);
 
@@ -938,7 +1007,7 @@ export function MapView({
 
     heatLayer.clearLayers();
 
-    if (!allConflictGroupMode) {
+    if (mapLayerMode !== "heat") {
       return;
     }
 
@@ -950,16 +1019,20 @@ export function MapView({
         weight: 1,
         fillColor: "#ff8066",
         fillOpacity: 0.12 + Math.sqrt(intensity) * 0.5,
-        className: "density-bubble",
-        interactive: false,
+        className: cell.key === focusedHeatCellKey ? "density-bubble active" : "density-bubble",
+        interactive: true,
       });
+
+      heatMarker
+        .bindTooltip(`${currentYear} 年 · ${cell.count} 条事件 · 点击查看该区域事件`)
+        .on("click", () => handleHeatCellSelect(cell));
 
       heatMarker.addTo(heatLayer);
     }
 
     heatLayer.bringToFront();
     battleLayerRef.current?.bringToFront();
-  }, [allConflictGroupMode, heatCells, maxHeatCellCount]);
+  }, [currentYear, focusedHeatCellKey, heatCells, mapLayerMode, maxHeatCellCount]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -971,7 +1044,7 @@ export function MapView({
     boundaryLayerRef.current?.remove();
     boundaryLayerRef.current = null;
 
-    if (!boundaryCollection || effectiveSnapshot === "off") {
+    if (!boundaryCollection) {
       return;
     }
 
@@ -995,6 +1068,7 @@ export function MapView({
       },
     }).addTo(map);
 
+    heatLayerRef.current?.bringToFront();
     battleLayerRef.current?.bringToFront();
     boundaryLayerRef.current = boundaryLayer;
   }, [activeCountryHighlight, activeCountryHighlightKey, boundaryCollection, effectiveSnapshot]);
@@ -1009,32 +1083,68 @@ export function MapView({
     battleLayer.clearLayers();
     markerRefs.current.clear();
 
+    if (mapLayerMode !== "events") {
+      return;
+    }
+
     for (const battle of battles) {
       const selected = battle.id === selectedBattleId;
-      const highlighted = highlightedBattleIds.has(battle.id);
-      const marker = L.circleMarker([battle.latitude, battle.longitude], getBattleStyle(battle, selected, highlighted))
-        .bindPopup(getBattlePopup(battle))
+      const highlighted =
+        highlightedBattleIds.has(battle.id) ||
+        focusedHeatBattleIds.has(battle.id) ||
+        battle.id === previewBattleId;
+      const marker = L.circleMarker(
+        [battle.latitude, battle.longitude],
+        getBattleStyle(battle, selected, highlighted, battle.id === pulseBattleId),
+      )
+        .bindPopup(getBattlePopupHtml(battle), { className: "battle-popup-leaflet" })
         .on("click", () => handleBattleSelect(battle));
 
       marker.addTo(battleLayer);
       markerRefs.current.set(battle.id, marker);
     }
-  }, [battles, highlightedBattleIds, selectedBattleId, onSelectBattle]);
+  }, [
+    battles,
+    focusedHeatBattleIds,
+    highlightedBattleIds,
+    mapLayerMode,
+    onSelectBattle,
+    previewBattleId,
+    pulseBattleId,
+    selectedBattleId,
+  ]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    const marker = selectedBattleId ? markerRefs.current.get(selectedBattleId) : null;
     const battle = selectedBattleId ? battles.find((row) => row.id === selectedBattleId) : null;
 
-    if (!map || !marker || !battle) {
+    if (
+      mapInstanceVersion === 0 ||
+      !battle ||
+      !shouldAutoFocusBattleSelection(selectedBattleId, lastAutoFocusedBattleIdRef.current)
+    ) {
+      return;
+    }
+
+    focusBattleMarkerLayer(battle);
+  }, [battles, mapInstanceVersion, selectedBattleId]);
+
+  useEffect(() => {
+    if (
+      mapLayerMode !== "events" ||
+      !selectedBattleId ||
+      pendingPopupBattleIdRef.current !== selectedBattleId
+    ) {
+      return;
+    }
+
+    const marker = markerRefs.current.get(selectedBattleId);
+    if (!marker) {
       return;
     }
 
     marker.openPopup();
-    if (!fitBattleCountries(battle, { duration: 0.45 })) {
-      map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 5), { animate: true, duration: 0.45 });
-    }
-  }, [battles, countryBoundsLookup, countryLookup, selectedBattleId]);
+    pendingPopupBattleIdRef.current = null;
+  }, [mapLayerMode, selectedBattleId]);
 
   return (
     <section id="map-view" className="view-panel map-panel">
@@ -1053,15 +1163,16 @@ export function MapView({
             <strong>{currentYear}</strong>
             <span>{effectiveSnapshotLabel}</span>
           </div>
+          <div className="map-layer-mode" aria-live="polite">
+            {mapLayerMode === "heat" ? "聚合气泡模式" : "事件点模式"}
+          </div>
           <div className="boundary-control">
             <label>
-              <span>{allConflictGroupMode ? "地图表达方式" : "CShapes 2.0 历史边界快照"}</span>
+              <span>CShapes 2.0 历史边界快照</span>
               <select
-                value={allConflictGroupMode ? "heatmap" : selectedSnapshot}
-                disabled={allConflictGroupMode}
+                value={selectedSnapshot}
                 onChange={(event) => setSelectedSnapshot(event.target.value)}
               >
-                {allConflictGroupMode ? <option value="heatmap">8°网格密度气泡</option> : null}
                 {cshapesSnapshotOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -1074,32 +1185,76 @@ export function MapView({
             </small>
           </div>
           <div className="map-legend" aria-label="冲突事件类型颜色图例">
-            {allConflictGroupMode ? (
-              <>
-                <div>
-                  <span style={{ "--legend-color": "#ff8066" } as React.CSSProperties} />
-                  <strong>气泡越大、颜色越亮，事件越集中</strong>
-                </div>
-                <div>
-                  <span style={{ "--legend-color": "#f1b86b" } as React.CSSProperties} />
-                  <strong>小点仍可点击查看事件</strong>
-                </div>
-              </>
-            ) : activeCountryHighlight.internalConflict.size > 0 ? (
+            {mapLayerMode === "heat" ? (
               <div>
-                <span style={{ "--legend-color": "#f1b86b" } as React.CSSProperties} />
-                <strong>内部冲突</strong>
+                <span style={{ "--legend-color": "#ff8066" } as React.CSSProperties} />
+                <strong>气泡越大、颜色越亮，当前年份事件越集中</strong>
               </div>
             ) : null}
-            {!allConflictGroupMode ? eventTypeLegend.map((style) => (
-              <div key={style.type}>
-                <span style={{ "--legend-color": style.color } as React.CSSProperties} />
-                <strong>{style.type}</strong>
-              </div>
-            )) : null}
+            {mapLayerMode === "events" ? (
+              <>
+                {activeCountryHighlight.internalConflict.size > 0 ? (
+                  <div>
+                    <span style={{ "--legend-color": "#f1b86b" } as React.CSSProperties} />
+                    <strong>内部冲突</strong>
+                  </div>
+                ) : null}
+                {activeCountryHighlight.winnerMain.size > 0 ? (
+                  <div>
+                    <span style={{ "--legend-color": "#69b7ff" } as React.CSSProperties} />
+                    <strong>{selectedCountryName ? "同阵营" : "胜方"}</strong>
+                  </div>
+                ) : null}
+                {activeCountryHighlight.loserMain.size > 0 ? (
+                  <div>
+                    <span style={{ "--legend-color": "#d94f5c" } as React.CSSProperties} />
+                    <strong>{selectedCountryName ? "对立方" : "败方"}</strong>
+                  </div>
+                ) : null}
+                {eventTypeLegend.map((style) => (
+                  <div key={style.type}>
+                    <span style={{ "--legend-color": style.color } as React.CSSProperties} />
+                    <strong>{style.type}</strong>
+                  </div>
+                ))}
+              </>
+            ) : null}
           </div>
         </div>
         <div className="map-list">
+          {focusedHeatCell ? (
+            <div className="map-heat-focus" role="status">
+              <span>
+                <strong>已聚焦密度气泡</strong>
+                {focusedHeatCell.count} 条事件
+              </span>
+              <button type="button" onClick={clearHeatCellFocus}>
+                退出区域聚焦
+              </button>
+            </div>
+          ) : null}
+          <div className="map-list-tools">
+            <label className="map-search-field">
+              <Search size={15} />
+              <input
+                value={eventSearch}
+                type="search"
+                placeholder="搜索事件、地点、类型、参战方"
+                onChange={(event) => setEventSearch(event.target.value)}
+              />
+            </label>
+            <label className="map-sort-field">
+              <span>排序</span>
+              <select
+                value={eventSortKey}
+                onChange={(event) => setEventSortKey(event.target.value as BattleSortKey)}
+              >
+                <option value="name">名称</option>
+                <option value="location">地点</option>
+                <option value="type">事件类型</option>
+              </select>
+            </label>
+          </div>
           {battles.length === 0 ? (
             <div className="empty-state empty-state-with-action">
               <p>{currentYear} 年没有可见的冲突事件。</p>
@@ -1107,23 +1262,71 @@ export function MapView({
                 重置筛选
               </button>
             </div>
+          ) : sortedListBattles.length === 0 ? (
+            <div className="empty-state">
+              <p>没有匹配“{eventSearch}”的事件。</p>
+            </div>
           ) : (
-            battles.slice(0, 8).map((battle) => (
+            visibleListBattles.map((battle) => (
               <button
                 key={battle.id}
-                className={battle.id === selectedBattleId ? "list-link active" : "list-link"}
+                className={[
+                  "list-link",
+                  battle.id === selectedBattleId ? "active" : "",
+                  battle.id === previewBattleId ? "preview" : "",
+                ].join(" ")}
                 type="button"
+                onPointerEnter={() => setPreviewBattleId(battle.id)}
+                onPointerLeave={() => setPreviewBattleId(null)}
+                onFocus={() => setPreviewBattleId(battle.id)}
+                onBlur={() => setPreviewBattleId(null)}
                 onClick={() => handleBattleSelect(battle)}
               >
-                <span>{battle.name}</span>
+                <span>
+                  <strong>{battle.name}</strong>
+                  <em>{battle.locationName ?? "未知地点"} · {battle.type ?? "事件"}</em>
+                </span>
                 <small>{battle.year}</small>
               </button>
             ))
           )}
+          {sortedListBattles.length > 8 ? (
+            <button
+              className="map-list-more"
+              type="button"
+              onClick={() => setExpandedEventList((expanded) => !expanded)}
+            >
+              {expandedEventList ? <ChevronsUp size={15} /> : <ChevronsDown size={15} />}
+              {expandedEventList ? "收起" : `查看更多 ${sortedListBattles.length - 8} 条`}
+            </button>
+          ) : null}
           {selectedBattle ? (
             <div className="map-selection">
               <strong>{selectedBattle.name}</strong>
               <span>{selectedBattle.locationName}</span>
+              {!selectedBattleHasCountrySides ? (
+                <span className="map-color-data-note" role="status">
+                  该事件没有可靠的胜败方或国家映射数据，未应用国家阵营着色。
+                </span>
+              ) : null}
+              <div className="map-selection-actions">
+                <button
+                  className="secondary-action-button compact"
+                  type="button"
+                  disabled={!previousBattleId}
+                  onClick={() => previousBattleId && onSelectBattle(previousBattleId)}
+                >
+                  上一条
+                </button>
+                <button
+                  className="secondary-action-button compact"
+                  type="button"
+                  disabled={!nextBattleId}
+                  onClick={() => nextBattleId && onSelectBattle(nextBattleId)}
+                >
+                  下一条
+                </button>
+              </div>
               <button className="secondary-action-button compact" type="button" onClick={() => onSelectBattle(null)}>
                 清除事件选择
               </button>

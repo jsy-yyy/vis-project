@@ -9,7 +9,6 @@ export type YearlyEventSummary = {
   year: number;
   totalCount: number;
   filteredCount: number;
-  topConflictGroups: Array<[string, number]>;
   topParticipants: Array<[string, number]>;
   sampleEvents: Battle[];
 };
@@ -76,7 +75,6 @@ export function getYearlyEventSummary(
     year,
     totalCount: baselineYearBattles.length,
     filteredCount: filteredYearBattles.length,
-    topConflictGroups: getTopEntries(filteredYearBattles.map((battle) => battle.warId)),
     topParticipants: getTopEntries(participantIds),
     sampleEvents: filteredYearBattles.slice(0, 5),
   };

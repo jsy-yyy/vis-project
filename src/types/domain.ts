@@ -69,7 +69,6 @@ export type Participant = {
 export type YearRange = [number, number];
 
 export type ConflictEventFilters = {
-  selectedWarId: string | null;
   selectedYearRange: YearRange;
   selectedParticipant: string | null;
 };
@@ -81,7 +80,6 @@ export type ConflictEventSummary = {
   yearRange: YearRange | null;
   topParticipants: Array<[string, number]>;
   battlesByType: Record<string, number>;
-  battlesByWar: Record<string, number>;
 };
 
 export type BattleSummary = ConflictEventSummary;

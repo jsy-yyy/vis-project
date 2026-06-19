@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import {
+  getAdjacentBattleId,
+  getAdjacentPlayableYear,
+  getPlayableYears,
+} from "../../lib/battleInteraction";
 import {
   getTimelinePeriodComparison,
   getYearlyEventCounts,
   getYearlyEventSummary,
 } from "../../lib/timelineAnalytics";
-import type { Battle, Participant, War, YearRange } from "../../types/domain";
+import type { Battle, Participant, YearRange } from "../../types/domain";
 
 type TimelineViewProps = {
   baselineBattles: Battle[];
   filteredBattles: Battle[];
-  wars: War[];
   participants: Participant[];
   selectedBattleId: string | null;
+  selectedBattleYear: number | null;
+  selectedBattleLocked: boolean;
   allYearRange: YearRange;
   selectedYearRange: YearRange;
   currentYear: number;
@@ -21,6 +27,7 @@ type TimelineViewProps = {
   onSelectBattle: (battleId: string | null) => void;
   onCurrentYearChange: (year: number) => void;
   onResetFilters: () => void;
+  onStatusChange: (message: string) => void;
 };
 
 const eventListLimit = 24;
@@ -29,9 +36,10 @@ const eventListPageSize = 24;
 export function TimelineView({
   baselineBattles,
   filteredBattles,
-  wars,
   participants,
   selectedBattleId,
+  selectedBattleYear,
+  selectedBattleLocked,
   allYearRange,
   selectedYearRange,
   currentYear,
@@ -39,17 +47,16 @@ export function TimelineView({
   onSelectBattle,
   onCurrentYearChange,
   onResetFilters,
+  onStatusChange,
 }: TimelineViewProps) {
   const chartScrollRef = useRef<HTMLDivElement | null>(null);
   const selectedBarRef = useRef<HTMLButtonElement | null>(null);
   const [visibleEventCount, setVisibleEventCount] = useState(eventListLimit);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackDelay, setPlaybackDelay] = useState(1400);
   const participantNames = useMemo(
     () => new Map(participants.map((participant) => [participant.id, participant.name])),
     [participants],
-  );
-  const warNames = useMemo(
-    () => new Map(wars.map((war) => [war.id, war.name])),
-    [wars],
   );
   const sortedBattles = useMemo(
     () => [...filteredBattles].sort((a, b) => a.year - b.year || a.name.localeCompare(b.name)),
@@ -59,6 +66,11 @@ export function TimelineView({
     () => sortedBattles.filter((battle) => battle.year === currentYear),
     [currentYear, sortedBattles],
   );
+  const playableYears = useMemo(() => getPlayableYears(filteredBattles), [filteredBattles]);
+  const previousPlayableYear = getAdjacentPlayableYear(playableYears, currentYear, -1);
+  const nextPlayableYear = getAdjacentPlayableYear(playableYears, currentYear, 1);
+  const previousBattleId = getAdjacentBattleId(currentYearBattles, selectedBattleId, -1);
+  const nextBattleId = getAdjacentBattleId(currentYearBattles, selectedBattleId, 1);
   const visibleCurrentYearBattles = currentYearBattles.slice(0, visibleEventCount);
   const hasHiddenCurrentYearBattles = visibleEventCount < currentYearBattles.length;
   const [absoluteMinYear, absoluteMaxYear] = allYearRange;
@@ -95,10 +107,6 @@ export function TimelineView({
     return participantNames.get(participantId) ?? participantId;
   }
 
-  function getConflictGroupLabel(warId: string) {
-    return warNames.get(warId) ?? warId;
-  }
-
   function formatRange(range: YearRange | null) {
     if (!range) {
       return "无可用区间";
@@ -125,20 +133,48 @@ export function TimelineView({
     setVisibleEventCount(eventListLimit);
   }, [currentYear, filteredBattles, selectedYearRange]);
 
+  useEffect(() => {
+    setIsPlaying(false);
+  }, [filteredBattles, selectedYearRange]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const nextYear = getAdjacentPlayableYear(playableYears, currentYear, 1);
+      if (nextYear === null) {
+        setIsPlaying(false);
+        onStatusChange("时间轴播放已到达最后一个有事件的年份。");
+        return;
+      }
+
+      onCurrentYearChange(nextYear);
+    }, playbackDelay);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentYear, isPlaying, onCurrentYearChange, onStatusChange, playableYears, playbackDelay]);
+
   function handleBattleSelect(battle: Battle) {
-    onCurrentYearChange(battle.year);
+    setIsPlaying(false);
     onSelectBattle(battle.id);
+  }
+
+  function selectYear(year: number) {
+    setIsPlaying(false);
+    onCurrentYearChange(year);
   }
 
   function handleBarKeyDown(event: KeyboardEvent<HTMLButtonElement>, year: number) {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      onCurrentYearChange(Math.max(minYear, year - 1));
+      selectYear(Math.max(minYear, year - 1));
     }
 
     if (event.key === "ArrowRight") {
       event.preventDefault();
-      onCurrentYearChange(Math.min(maxYear, year + 1));
+      selectYear(Math.min(maxYear, year + 1));
     }
   }
 
@@ -160,9 +196,57 @@ export function TimelineView({
           </div>
           <output aria-label="当前地图年份">{currentYear}</output>
         </div>
-        <div className="inline-actions">
-          <button className="secondary-action-button compact" type="button" onClick={() => onCurrentYearChange(maxYear)}>
-            重置年份到 {maxYear}
+        <div className="timeline-playback-controls" aria-label="时间轴播放控制">
+          <button
+            className="icon-control-button"
+            type="button"
+            disabled={previousPlayableYear === null}
+            onClick={() => previousPlayableYear !== null && selectYear(previousPlayableYear)}
+            title="上一个有事件的年份"
+          >
+            <SkipBack size={16} />
+            <span className="sr-only">上一个有事件的年份</span>
+          </button>
+          <button
+            className={isPlaying ? "icon-control-button active" : "icon-control-button"}
+            type="button"
+            disabled={playableYears.length < 2}
+            aria-pressed={isPlaying}
+            onClick={() => {
+              if (!isPlaying && nextPlayableYear === null && playableYears.length > 0) {
+                onCurrentYearChange(playableYears[0]);
+              }
+              setIsPlaying((playing) => !playing);
+              onStatusChange(isPlaying ? "时间轴播放已暂停。" : "时间轴播放已开始。");
+            }}
+            title={isPlaying ? "暂停时间轴" : "播放时间轴"}
+          >
+            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            <span className="sr-only">{isPlaying ? "暂停时间轴" : "播放时间轴"}</span>
+          </button>
+          <button
+            className="icon-control-button"
+            type="button"
+            disabled={nextPlayableYear === null}
+            onClick={() => nextPlayableYear !== null && selectYear(nextPlayableYear)}
+            title="下一个有事件的年份"
+          >
+            <SkipForward size={16} />
+            <span className="sr-only">下一个有事件的年份</span>
+          </button>
+          <label className="timeline-speed-control">
+            <span>速度</span>
+            <select
+              value={playbackDelay}
+              onChange={(event) => setPlaybackDelay(Number(event.target.value))}
+            >
+              <option value={2200}>慢</option>
+              <option value={1400}>标准</option>
+              <option value={800}>快</option>
+            </select>
+          </label>
+          <button className="secondary-action-button compact" type="button" onClick={() => selectYear(maxYear)}>
+            回到 {maxYear}
           </button>
           {selectedBattleId ? (
             <button className="secondary-action-button compact" type="button" onClick={() => onSelectBattle(null)}>
@@ -177,7 +261,7 @@ export function TimelineView({
             min={minYear}
             max={maxYear}
             value={currentYear}
-            onChange={(event) => onCurrentYearChange(Number(event.target.value))}
+            onChange={(event) => selectYear(Number(event.target.value))}
             aria-label="选择地图显示的单一年份"
           />
           <span>{maxYear}</span>
@@ -217,16 +301,22 @@ export function TimelineView({
                 index === baselineYearlyCounts.length - 1 ||
                 year % yearTickInterval === 0;
 
+              const pinnedEventYear = selectedBattleLocked && year === selectedBattleYear && !selected;
+
               return (
                 <button
                   key={year}
                   ref={selected ? selectedBarRef : undefined}
-                  className={selected ? "timeline-bar active" : "timeline-bar"}
+                  className={[
+                    "timeline-bar",
+                    selected ? "active" : "",
+                    pinnedEventYear ? "pinned-event-year" : "",
+                  ].join(" ")}
                   type="button"
                   title={`${year} 年：${filteredCount} 条符合筛选，${count} 条总事件`}
                   aria-label={`${year} 年：${filteredCount} 条符合筛选的冲突事件，${count} 条总冲突事件`}
                   aria-pressed={selected}
-                  onClick={() => onCurrentYearChange(year)}
+                  onClick={() => selectYear(year)}
                   onKeyDown={(event) => handleBarKeyDown(event, year)}
                 >
                   <span className="timeline-bar-slot">
@@ -272,16 +362,6 @@ export function TimelineView({
               <dd>{currentYearSummary.filteredCount}</dd>
             </div>
             <div>
-              <dt>主要冲突组</dt>
-              <dd>
-                {currentYearSummary.topConflictGroups.length > 0
-                  ? currentYearSummary.topConflictGroups
-                      .map(([group, count]) => `${getConflictGroupLabel(group)} (${count})`)
-                      .join(", ")
-                  : "没有匹配的冲突组"}
-              </dd>
-            </div>
-            <div>
               <dt>主要参战方</dt>
               <dd>
                 {currentYearSummary.topParticipants.length > 0
@@ -316,9 +396,27 @@ export function TimelineView({
       </div>
       <div className="timeline-event-heading">
         <h3>{currentYear} 年事件</h3>
-        <span>
-          显示 {visibleCurrentYearBattles.length} / {currentYearBattles.length}
-        </span>
+        <div className="timeline-event-navigation">
+          <span>
+            显示 {visibleCurrentYearBattles.length} / {currentYearBattles.length}
+          </span>
+          <button
+            type="button"
+            className="secondary-action-button compact"
+            disabled={!previousBattleId}
+            onClick={() => previousBattleId && onSelectBattle(previousBattleId)}
+          >
+            上一事件
+          </button>
+          <button
+            type="button"
+            className="secondary-action-button compact"
+            disabled={!nextBattleId}
+            onClick={() => nextBattleId && onSelectBattle(nextBattleId)}
+          >
+            下一事件
+          </button>
+        </div>
       </div>
       {currentYearBattles.length === 0 ? (
         <div className="empty-state empty-state-with-action">

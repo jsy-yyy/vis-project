@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { collapseRepeatedWarSuffix } from "./war-name-normalization.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, "..");
@@ -216,7 +217,7 @@ function normalizeWarName(value, year) {
       warNameMappings.get(lookupKey) ??
       (lookupKey === "world war" ? inferWorldWarFromYear(year) : null) ??
       name.replace(/\s+/g, " ").trim();
-    const correctedName = correctWorldWarByYear(canonicalName, year);
+    const correctedName = collapseRepeatedWarSuffix(correctWorldWarByYear(canonicalName, year));
 
     const canonicalKey = normalizeWarLookupKey(correctedName);
 

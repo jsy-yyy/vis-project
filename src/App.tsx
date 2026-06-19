@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FilterPanel } from "./components/filters/FilterPanel";
 import { AppHeader } from "./components/layout/AppHeader";
 import { AppShell } from "./components/layout/AppShell";
@@ -9,7 +9,14 @@ import { MapView } from "./components/views/MapView";
 import { NetworkView } from "./components/views/NetworkView";
 import { TimelineView } from "./components/views/TimelineView";
 import { useBattleData } from "./hooks/useBattleData";
-import { getVisibleSelectedEvent } from "./lib/appState";
+import {
+  buildSharedAppSearch,
+  clampYearRange,
+  getSelectedEvent,
+  getSelectionScopeStatus,
+  parseSharedAppState,
+} from "./lib/appState";
+import { getFocusedBattleState } from "./lib/battleInteraction";
 import {
   filterBattles,
   getBattleYearRange,
@@ -19,29 +26,52 @@ import {
 import type { YearRange } from "./types/domain";
 
 export default function App() {
-  const { battles, wars, participants, loading, error, retry } = useBattleData();
+  const { battles, participants, loading, error, retry } = useBattleData();
   const allYearRange = useMemo(() => getBattleYearRange(battles), [battles]);
-  const [selectedWarId, setSelectedWarId] = useState<string | null>("all");
   const [selectedYearRange, setSelectedYearRange] = useState<YearRange>(allYearRange);
   const [currentYear, setCurrentYear] = useState(allYearRange[1]);
   const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
   const [selectedBattleId, setSelectedBattleId] = useState<string | null>(null);
+  const [selectedBattleLocked, setSelectedBattleLocked] = useState(false);
   const [detailStatusMessage, setDetailStatusMessage] = useState<string | null>(null);
   const [yearAdjustmentMessage, setYearAdjustmentMessage] = useState<string | null>(null);
+  const [liveStatusMessage, setLiveStatusMessage] = useState("BattleMap 已准备好。");
+  const [stateRestoredFromUrl, setStateRestoredFromUrl] = useState(false);
 
   useEffect(() => {
-    if (battles.length === 0) {
+    if (battles.length === 0 || stateRestoredFromUrl) {
       return;
     }
 
-    setSelectedYearRange(allYearRange);
-    setCurrentYear(allYearRange[1]);
-  }, [allYearRange, battles]);
+    const sharedState = parseSharedAppState(window.location.search);
+    const nextYearRange = clampYearRange(sharedState.selectedYearRange, allYearRange);
+    const nextParticipant = sharedState.selectedParticipant &&
+      participants.some((participant) => participant.id === sharedState.selectedParticipant)
+      ? sharedState.selectedParticipant
+      : null;
+    const filteredEvents = filterBattles(battles, {
+      selectedYearRange: nextYearRange,
+      selectedParticipant: nextParticipant,
+    });
+    const clampedYear = sharedState.currentYear
+      ? Math.min(Math.max(sharedState.currentYear, nextYearRange[0]), nextYearRange[1])
+      : nextYearRange[1];
+    const nextYear = getClosestBattleYear(filteredEvents, clampedYear);
+    const selectedEventExists = Boolean(
+      sharedState.selectedBattleId && battles.some((battle) => battle.id === sharedState.selectedBattleId),
+    );
+
+    setSelectedYearRange(nextYearRange);
+    setSelectedParticipant(nextParticipant);
+    setCurrentYear(nextYear);
+    setSelectedBattleId(selectedEventExists ? sharedState.selectedBattleId : null);
+    setSelectedBattleLocked(selectedEventExists ? sharedState.selectedBattleLocked : false);
+    setStateRestoredFromUrl(true);
+  }, [allYearRange, battles, participants, stateRestoredFromUrl]);
 
   const timeWindowBattles = useMemo(
     () =>
       filterBattles(battles, {
-        selectedWarId: "all",
         selectedYearRange,
         selectedParticipant: null,
       }),
@@ -50,20 +80,18 @@ export default function App() {
   const scopeBattles = useMemo(
     () =>
       filterBattles(battles, {
-        selectedWarId,
         selectedYearRange,
         selectedParticipant: null,
       }),
-    [battles, selectedWarId, selectedYearRange],
+    [battles, selectedYearRange],
   );
   const resultBattles = useMemo(
     () =>
       filterBattles(battles, {
-        selectedWarId,
         selectedYearRange,
         selectedParticipant,
       }),
-    [battles, selectedWarId, selectedYearRange, selectedParticipant],
+    [battles, selectedYearRange, selectedParticipant],
   );
 
   const summary = useMemo(() => summarizeBattles(resultBattles), [resultBattles]);
@@ -72,9 +100,43 @@ export default function App() {
     [currentYear, resultBattles],
   );
   const selectedBattle = useMemo(
-    () => getVisibleSelectedEvent(resultBattles, mapBattles, selectedBattleId),
+    () => getSelectedEvent(battles, resultBattles, mapBattles, selectedBattleId, selectedBattleLocked),
+    [battles, resultBattles, mapBattles, selectedBattleId, selectedBattleLocked],
+  );
+  const selectedBattleScopeStatus = useMemo(
+    () => getSelectionScopeStatus(resultBattles, mapBattles, selectedBattleId),
     [resultBattles, mapBattles, selectedBattleId],
   );
+  const highlightedParticipantIds = selectedBattle?.participants ?? [];
+
+  useEffect(() => {
+    if (!stateRestoredFromUrl || battles.length === 0) {
+      return;
+    }
+
+    const nextSearch = buildSharedAppSearch({
+      allYearRange,
+      currentYear,
+      selectedYearRange,
+      selectedParticipant,
+      selectedBattleId,
+      selectedBattleLocked,
+    });
+    const nextUrl = `${window.location.pathname}${nextSearch}${window.location.hash}`;
+
+    if (nextUrl !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [
+    allYearRange,
+    battles.length,
+    currentYear,
+    selectedBattleId,
+    selectedBattleLocked,
+    selectedParticipant,
+    selectedYearRange,
+    stateRestoredFromUrl,
+  ]);
 
   function syncSelectedBattleAfterScopeChange(nextBattles: typeof battles, nextYear: number, message: string) {
     if (!selectedBattleId) {
@@ -88,13 +150,44 @@ export default function App() {
       return;
     }
 
+    if (selectedBattleLocked) {
+      setDetailStatusMessage("锁定事件当前不在筛选范围或地图年份内，详情已保留。");
+      return;
+    }
+
     setDetailStatusMessage(message);
+    setLiveStatusMessage(message);
     setSelectedBattleId(null);
+    setSelectedBattleLocked(false);
   }
+
+  const focusBattle = useCallback(
+    (battleId: string, options: { scrollTo?: "map" | "details" | "none"; announce?: boolean } = {}) => {
+      const nextState = getFocusedBattleState(battles, battleId, selectedBattleLocked);
+      if (!nextState) {
+        setLiveStatusMessage("未找到该事件，选择保持不变。");
+        return;
+      }
+
+      setCurrentYear(nextState.currentYear);
+      setSelectedBattleId(nextState.selectedBattleId);
+      setSelectedBattleLocked(nextState.selectedBattleLocked);
+      setDetailStatusMessage(null);
+      setYearAdjustmentMessage(null);
+
+      if (options.announce !== false) {
+        setLiveStatusMessage(`已定位事件：${nextState.battle.name}，${nextState.battle.year} 年。`);
+      }
+
+      if (options.scrollTo && options.scrollTo !== "none") {
+        window.location.hash = options.scrollTo === "details" ? "analysis-view" : "map-view";
+      }
+    },
+    [battles, selectedBattleLocked],
+  );
 
   function updateYearRange(range: YearRange) {
     const nextBattles = filterBattles(battles, {
-      selectedWarId,
       selectedYearRange: range,
       selectedParticipant,
     });
@@ -107,6 +200,7 @@ export default function App() {
     setYearAdjustmentMessage(
       nextYear !== currentYear ? `地图年份已根据当前年份窗口调整为 ${nextYear}。` : null,
     );
+    setLiveStatusMessage(`年份窗口已更新为 ${range[0]}-${range[1]}，地图年份 ${nextYear}。`);
     syncSelectedBattleAfterScopeChange(
       nextBattles,
       nextYear,
@@ -117,6 +211,7 @@ export default function App() {
   function updateCurrentYear(year: number) {
     setCurrentYear(year);
     setYearAdjustmentMessage(null);
+    setLiveStatusMessage(`地图年份已切换为 ${year}。`);
     syncSelectedBattleAfterScopeChange(
       resultBattles,
       year,
@@ -125,60 +220,75 @@ export default function App() {
   }
 
   function updateSelectedBattle(battleId: string | null) {
-    setSelectedBattleId(battleId);
+    if (battleId) {
+      focusBattle(battleId);
+      return;
+    }
+
+    setSelectedBattleId(null);
+    if (!battleId) {
+      setSelectedBattleLocked(false);
+    }
+    setDetailStatusMessage(null);
+    setLiveStatusMessage("已清除事件选择。");
+  }
+
+  function toggleSelectedBattleLock() {
+    if (!selectedBattleId) {
+      return;
+    }
+
+    setSelectedBattleLocked((locked) => {
+      setLiveStatusMessage(locked ? "已解除事件锁定。" : "已锁定当前事件。");
+      return !locked;
+    });
     setDetailStatusMessage(null);
   }
 
+  function jumpToSelectedBattle() {
+    if (!selectedBattle) {
+      return;
+    }
+
+    setSelectedYearRange([
+      Math.min(selectedYearRange[0], selectedBattle.year),
+      Math.max(selectedYearRange[1], selectedBattle.year),
+    ]);
+    setCurrentYear(selectedBattle.year);
+    setDetailStatusMessage(null);
+    setLiveStatusMessage(`已跳转到锁定事件年份 ${selectedBattle.year}。`);
+    window.location.hash = "map-view";
+  }
+
   function resetFilters() {
-    setSelectedWarId("all");
     setSelectedYearRange(allYearRange);
     setSelectedParticipant(null);
     setCurrentYear(allYearRange[1]);
     setYearAdjustmentMessage(null);
     setDetailStatusMessage(null);
     setSelectedBattleId(null);
+    setSelectedBattleLocked(false);
+    setLiveStatusMessage("筛选已重置。");
   }
 
-  function applyCaseStudy(warId: string, range: YearRange) {
+  function applyCaseStudy(range: YearRange, label: string) {
     const nextBattles = filterBattles(battles, {
-      selectedWarId: warId,
       selectedYearRange: range,
       selectedParticipant: null,
     });
 
-    setSelectedWarId(warId);
     setSelectedYearRange(range);
     setSelectedParticipant(null);
     setCurrentYear(getClosestBattleYear(nextBattles, range[1]));
     setYearAdjustmentMessage(null);
     setDetailStatusMessage(null);
     setSelectedBattleId(null);
-  }
-
-  function updateWarFilter(warId: string | null) {
-    const nextBattles = filterBattles(battles, {
-      selectedWarId: warId,
-      selectedYearRange,
-      selectedParticipant,
-    });
-
-    const nextYear = getClosestBattleYear(nextBattles, currentYear);
-
-    setSelectedWarId(warId);
-    setCurrentYear(nextYear);
-    setYearAdjustmentMessage(
-      nextYear !== currentYear ? `地图年份已根据当前冲突组 conflict group 调整为 ${nextYear}。` : null,
-    );
-    syncSelectedBattleAfterScopeChange(
-      nextBattles,
-      nextYear,
-      "冲突组筛选变化后，原选中事件已不在当前结果中，详情已清空。",
-    );
+    setSelectedBattleLocked(false);
+    setLiveStatusMessage(`已应用案例窗口：${label}。`);
   }
 
   function updateParticipantFilter(participantId: string | null) {
     const nextBattles = filterBattles(battles, {
-      selectedWarId,
       selectedYearRange,
       selectedParticipant: participantId,
     });
@@ -195,6 +305,40 @@ export default function App() {
       nextYear,
       "参战方筛选变化后，原选中事件已不在当前结果中，详情已清空。",
     );
+    setLiveStatusMessage(
+      participantId
+        ? `参战方筛选已应用：${participants.find((participant) => participant.id === participantId)?.name ?? participantId}。`
+        : "已清除参战方筛选。",
+    );
+  }
+
+  function copyAnalysisLink() {
+    const link = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const fallbackCopy = () => {
+      const textarea = document.createElement("textarea");
+      textarea.value = link;
+      textarea.setAttribute("readonly", "true");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    };
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(link).then(
+        () => setLiveStatusMessage("当前分析链接已复制。"),
+        () => {
+          fallbackCopy();
+          setLiveStatusMessage("当前分析链接已复制。");
+        },
+      );
+      return;
+    }
+
+    fallbackCopy();
+    setLiveStatusMessage("当前分析链接已复制。");
   }
 
   if (loading) {
@@ -214,6 +358,7 @@ export default function App() {
 
   return (
     <AppShell
+      onCopyLink={copyAnalysisLink}
       header={
         <AppHeader
           totalBattles={battles.length}
@@ -224,13 +369,10 @@ export default function App() {
       }
       filters={
         <FilterPanel
-          wars={wars}
           participants={participants}
           allYearRange={allYearRange}
-          selectedWarId={selectedWarId}
           selectedYearRange={selectedYearRange}
           selectedParticipant={selectedParticipant}
-          onWarChange={updateWarFilter}
           onYearRangeChange={updateYearRange}
           onParticipantChange={updateParticipantFilter}
           onReset={resetFilters}
@@ -240,47 +382,78 @@ export default function App() {
         <>
           <MapView
             battles={mapBattles}
-            heatmapBattles={resultBattles}
-            selectedBattleId={selectedBattleId}
+            selectedBattleId={selectedBattleScopeStatus.inMapYear ? selectedBattleId : null}
             currentYear={currentYear}
-            selectedWarId={selectedWarId}
-            onSelectBattle={updateSelectedBattle}
+            participants={participants}
+            onSelectBattle={(battleId) => {
+              if (battleId) {
+                focusBattle(battleId, { scrollTo: "none" });
+              } else {
+                updateSelectedBattle(null);
+              }
+            }}
             onResetFilters={resetFilters}
           />
           <TimelineView
             baselineBattles={timeWindowBattles}
             filteredBattles={resultBattles}
-            wars={wars}
             participants={participants}
             selectedBattleId={selectedBattleId}
+            selectedBattleYear={selectedBattle?.year ?? null}
+            selectedBattleLocked={selectedBattleLocked}
             allYearRange={allYearRange}
             selectedYearRange={selectedYearRange}
             currentYear={currentYear}
             yearAdjustmentMessage={yearAdjustmentMessage}
-            onSelectBattle={updateSelectedBattle}
+            onSelectBattle={(battleId) => {
+              if (battleId) {
+                focusBattle(battleId, { scrollTo: "map" });
+              } else {
+                updateSelectedBattle(null);
+              }
+            }}
             onCurrentYearChange={updateCurrentYear}
             onResetFilters={resetFilters}
+            onStatusChange={setLiveStatusMessage}
           />
           <NetworkView
             battles={scopeBattles}
-            wars={wars}
             participants={participants}
             selectedParticipant={selectedParticipant}
+            highlightedParticipantIds={highlightedParticipantIds}
             onSelectParticipant={updateParticipantFilter}
+            onSelectBattle={(battleId) => focusBattle(battleId, { scrollTo: "map" })}
             onResetFilters={resetFilters}
           />
         </>
       }
       sidebar={
         <>
-          <StatisticsPanel summary={summary} wars={wars} participants={participants} />
+          <StatisticsPanel
+            summary={summary}
+            participants={participants}
+            selectedParticipant={selectedParticipant}
+            onParticipantSelect={updateParticipantFilter}
+          />
           <DetailPanel
             battle={selectedBattle}
-            wars={wars}
             participants={participants}
             emptyMessage={detailStatusMessage}
+            locked={selectedBattleLocked}
+            outOfScope={Boolean(
+              selectedBattleId && selectedBattleLocked && !selectedBattleScopeStatus.inFilteredScope,
+            )}
+            outOfMapYear={Boolean(
+              selectedBattleId && selectedBattleLocked && selectedBattleScopeStatus.inFilteredScope && !selectedBattleScopeStatus.inMapYear,
+            )}
+            onToggleLock={toggleSelectedBattleLock}
+            onClearSelection={() => updateSelectedBattle(null)}
+            onJumpToEvent={jumpToSelectedBattle}
           />
           <CaseStudyPanel onApplyCaseStudy={applyCaseStudy} />
+          <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+            {liveStatusMessage}
+          </div>
         </>
       }
     />

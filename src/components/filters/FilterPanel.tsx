@@ -1,48 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { filterNamedRows } from "../../lib/appState";
-import type { Participant, War, YearRange } from "../../types/domain";
+import type { Participant, YearRange } from "../../types/domain";
 
 type FilterPanelProps = {
-  wars: War[];
   participants: Participant[];
   allYearRange: YearRange;
-  selectedWarId: string | null;
   selectedYearRange: YearRange;
   selectedParticipant: string | null;
-  onWarChange: (warId: string | null) => void;
   onYearRangeChange: (range: YearRange) => void;
   onParticipantChange: (participantId: string | null) => void;
   onReset: () => void;
 };
 
 export function FilterPanel({
-  wars,
   participants,
   allYearRange,
-  selectedWarId,
   selectedYearRange,
   selectedParticipant,
-  onWarChange,
   onYearRangeChange,
   onParticipantChange,
   onReset,
 }: FilterPanelProps) {
   const [minYear, maxYear] = allYearRange;
-  const [warSearch, setWarSearch] = useState("");
   const [participantSearch, setParticipantSearch] = useState("");
-  const [expanded, setExpanded] = useState(true);
-  const visibleWars = useMemo(() => filterNamedRows(wars, warSearch), [warSearch, wars]);
+  const [expanded, setExpanded] = useState(false);
   const visibleParticipants = useMemo(
     () => filterNamedRows(participants, participantSearch),
     [participantSearch, participants],
   );
-  const warOptions = useMemo(() => {
-    const selectedWar = selectedWarId && selectedWarId !== "all" ? wars.find((war) => war.id === selectedWarId) : null;
-    return selectedWar && !visibleWars.some((war) => war.id === selectedWar.id)
-      ? [selectedWar, ...visibleWars]
-      : visibleWars;
-  }, [selectedWarId, visibleWars, wars]);
   const participantOptions = useMemo(() => {
     const selectedParticipantRow = participants.find((participant) => participant.id === selectedParticipant);
     return selectedParticipantRow &&
@@ -50,22 +36,23 @@ export function FilterPanel({
       ? [selectedParticipantRow, ...visibleParticipants]
       : visibleParticipants;
   }, [participants, selectedParticipant, visibleParticipants]);
-  const selectedWarName =
-    selectedWarId && selectedWarId !== "all"
-      ? wars.find((war) => war.id === selectedWarId)?.name ?? selectedWarId
-      : "全部冲突组";
   const selectedParticipantName = selectedParticipant
     ? participants.find((participant) => participant.id === selectedParticipant)?.name ?? selectedParticipant
     : "全部参战方";
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 720px)");
-    const syncExpandedState = () => setExpanded(!mediaQuery.matches);
+    const syncExpandedState = () => setExpanded(false);
 
     syncExpandedState();
     mediaQuery.addEventListener("change", syncExpandedState);
     return () => mediaQuery.removeEventListener("change", syncExpandedState);
   }, []);
+
+  function handleReset() {
+    onReset();
+    setParticipantSearch("");
+  }
 
   function updateStartYear(value: number) {
     onYearRangeChange([Math.min(value, selectedYearRange[1]), selectedYearRange[1]]);
@@ -83,8 +70,14 @@ export function FilterPanel({
           <span>全局筛选</span>
         </div>
         <span className="filter-summary">
-          {selectedWarName} · {selectedYearRange[0]}-{selectedYearRange[1]} · {selectedParticipantName}
+          {selectedYearRange[0]}-{selectedYearRange[1]} · {selectedParticipantName}
         </span>
+        {!expanded ? (
+          <button className="filter-heading-reset" type="button" onClick={handleReset} title="重置筛选">
+            <RotateCcw size={15} />
+            <span>重置</span>
+          </button>
+        ) : null}
         <button
           className="filter-toggle-button"
           type="button"
@@ -100,27 +93,6 @@ export function FilterPanel({
       </div>
 
       <div id="global-filter-fields" className="filter-fields">
-        <label className="field">
-          <span>冲突组 conflict group</span>
-          <div className="stacked-control">
-            <input
-              type="search"
-              value={warSearch}
-              onChange={(event) => setWarSearch(event.target.value)}
-              placeholder="搜索冲突组"
-              aria-label="搜索冲突组"
-            />
-            <select value={selectedWarId ?? "all"} onChange={(event) => onWarChange(event.target.value)}>
-              <option value="all">全部冲突组</option>
-              {warOptions.map((war) => (
-                <option key={war.id} value={war.id}>
-                  {war.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </label>
-
         <div className="range-fields">
           <label className="field">
             <span>起始年份</span>
@@ -171,11 +143,7 @@ export function FilterPanel({
         <button
           className="icon-text-button"
           type="button"
-          onClick={() => {
-            onReset();
-            setWarSearch("");
-            setParticipantSearch("");
-          }}
+          onClick={handleReset}
         >
           <RotateCcw size={16} />
           重置

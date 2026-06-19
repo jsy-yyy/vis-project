@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Grid3X3, Share2, Waypoints } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
+import { Grid3X3, Maximize2, RotateCcw, Share2, Waypoints, ZoomIn, ZoomOut } from "lucide-react";
 import { buildParticipantNetwork } from "../../lib/networkAnalytics";
 import type {
   ParticipantNetworkEdge,
@@ -7,14 +8,15 @@ import type {
   ParticipantNetworkRelation,
   ParticipantNetworkSide,
 } from "../../lib/networkAnalytics";
-import type { Battle, Participant, War } from "../../types/domain";
+import type { Battle, Participant } from "../../types/domain";
 
 type NetworkViewProps = {
   battles: Battle[];
-  wars: War[];
   participants: Participant[];
   selectedParticipant: string | null;
+  highlightedParticipantIds: string[];
   onSelectParticipant: (participantId: string | null) => void;
+  onSelectBattle: (battleId: string) => void;
   onResetFilters: () => void;
 };
 
@@ -52,7 +54,6 @@ type ParticipantDetail = {
   loserCount: number;
   neutralCount: number;
   yearRange: string;
-  topConflictGroups: Array<[string, number]>;
   sampleEvents: Battle[];
 };
 
@@ -65,7 +66,6 @@ type EdgeDetail = {
   opponentCount: number;
   cooccurrenceCount: number;
   yearRange: string;
-  topConflictGroups: Array<[string, number]>;
   sampleEvents: Battle[];
 };
 
@@ -75,6 +75,62 @@ type ParticipantHeatmap = {
   cells: Map<string, number>;
   maxCount: number;
 };
+
+type NetworkViewport = {
+  x: number;
+  y: number;
+  scale: number;
+};
+
+type NetworkTooltip = {
+  x: number;
+  y: number;
+  title: string;
+  lines: string[];
+};
+
+const defaultViewport: NetworkViewport = { x: 0, y: 0, scale: 1 };
+const minViewportScale = 0.65;
+const maxViewportScale = 2.6;
+const viewportVisibilityMargin = 56;
+
+function clampViewport(viewport: NetworkViewport): NetworkViewport {
+  const scaledWidth = viewBoxWidth * viewport.scale;
+  const scaledHeight = viewBoxHeight * viewport.scale;
+  const minX = viewportVisibilityMargin - scaledWidth;
+  const maxX = viewBoxWidth - viewportVisibilityMargin;
+  const minY = viewportVisibilityMargin - scaledHeight;
+  const maxY = viewBoxHeight - viewportVisibilityMargin;
+
+  return {
+    ...viewport,
+    x: Math.min(maxX, Math.max(minX, viewport.x)),
+    y: Math.min(maxY, Math.max(minY, viewport.y)),
+  };
+}
+
+function getFitViewport(nodes: PositionedNode[]): NetworkViewport {
+  if (nodes.length === 0) {
+    return defaultViewport;
+  }
+
+  const minX = Math.min(...nodes.map((node) => node.x - node.radius - 52));
+  const maxX = Math.max(...nodes.map((node) => node.x + node.radius + 52));
+  const minY = Math.min(...nodes.map((node) => node.y - node.radius - 38));
+  const maxY = Math.max(...nodes.map((node) => node.y + node.radius + 38));
+  const contentWidth = Math.max(1, maxX - minX);
+  const contentHeight = Math.max(1, maxY - minY);
+  const scale = Math.min(
+    1.35,
+    Math.max(minViewportScale, Math.min((viewBoxWidth - 64) / contentWidth, (viewBoxHeight - 64) / contentHeight)),
+  );
+
+  return clampViewport({
+    scale,
+    x: viewBoxWidth / 2 - ((minX + maxX) / 2) * scale,
+    y: viewBoxHeight / 2 - ((minY + maxY) / 2) * scale,
+  });
+}
 
 function getParticipantName(participantId: string, participantNames: Map<string, string>) {
   return participantNames.get(participantId) ?? participantId;
@@ -131,30 +187,39 @@ function formatYearRange(battles: Battle[]) {
   return minYear === maxYear ? String(minYear) : `${minYear}-${maxYear}`;
 }
 
-function getTopEntries(values: string[], limit = 4) {
-  const counts = new Map<string, number>();
-
-  for (const value of values) {
-    counts.set(value, (counts.get(value) ?? 0) + 1);
-  }
-
-  return Array.from(counts.entries())
-    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-    .slice(0, limit);
-}
-
-function getHeatmapKey(participantId: string, warId: string) {
-  return `${participantId}::${warId}`;
+function getHeatmapKey(participantId: string, periodId: string) {
+  return `${participantId}::${periodId}`;
 }
 
 function buildParticipantHeatmap(
   battles: Battle[],
   rows: ParticipantNetworkNode[],
-  warNames: Map<string, string>,
 ): ParticipantHeatmap {
   const visibleParticipantIds = new Set(rows.map((row) => row.id));
-  const warCounts = new Map<string, number>();
   const cells = new Map<string, number>();
+  const years = battles.map((battle) => battle.year);
+
+  if (years.length === 0) {
+    return { rows, columns: [], cells, maxCount: 1 };
+  }
+
+  const minYear = Math.min(...years);
+  const maxYear = Math.max(...years);
+  const periodWidth = Math.max(1, Math.ceil((maxYear - minYear + 1) / heatmapColumnLimit));
+  const columns = Array.from(
+    { length: Math.ceil((maxYear - minYear + 1) / periodWidth) },
+    (_, index) => {
+      const start = minYear + index * periodWidth;
+      const end = Math.min(maxYear, start + periodWidth - 1);
+      return {
+        id: `${start}-${end}`,
+        name: start === end ? String(start) : `${start}-${end}`,
+        count: 0,
+        start,
+        end,
+      };
+    },
+  );
 
   for (const battle of battles) {
     const visibleParticipants = battle.participants.filter((participantId) => visibleParticipantIds.has(participantId));
@@ -163,31 +228,29 @@ function buildParticipantHeatmap(
       continue;
     }
 
-    warCounts.set(battle.warId, (warCounts.get(battle.warId) ?? 0) + visibleParticipants.length);
+    const column = columns.find((period) => battle.year >= period.start && battle.year <= period.end);
+    if (!column) {
+      continue;
+    }
+    column.count += visibleParticipants.length;
 
     for (const participantId of visibleParticipants) {
-      const key = getHeatmapKey(participantId, battle.warId);
+      const key = getHeatmapKey(participantId, column.id);
       cells.set(key, (cells.get(key) ?? 0) + 1);
     }
   }
 
-  const columns = Array.from(warCounts.entries())
-    .sort((left, right) => right[1] - left[1] || (warNames.get(left[0]) ?? left[0]).localeCompare(warNames.get(right[0]) ?? right[0]))
-    .slice(0, heatmapColumnLimit)
-    .map(([id, count]) => ({ id, name: warNames.get(id) ?? id, count }));
-  const allowedColumnIds = new Set(columns.map((column) => column.id));
   let maxCount = 1;
-
-  for (const [key, count] of cells.entries()) {
-    const [, warId] = key.split("::");
-    if (!allowedColumnIds.has(warId)) {
-      cells.delete(key);
-      continue;
-    }
+  for (const count of cells.values()) {
     maxCount = Math.max(maxCount, count);
   }
 
-  return { rows, columns, cells, maxCount };
+  return {
+    rows,
+    columns: columns.map(({ id, name, count }) => ({ id, name, count })),
+    cells,
+    maxCount,
+  };
 }
 
 function getHeatmapFill(count: number, maxCount: number) {
@@ -203,7 +266,6 @@ function getParticipantDetail(
   participantId: string,
   battles: Battle[],
   participantNames: Map<string, string>,
-  warNames: Map<string, string>,
   networkNode?: ParticipantNetworkNode,
 ): ParticipantDetail | null {
   const participantBattles = battles
@@ -222,7 +284,6 @@ function getParticipantDetail(
     loserCount: networkNode?.loserCount ?? 0,
     neutralCount: networkNode?.neutralCount ?? participantBattles.length,
     yearRange: formatYearRange(participantBattles),
-    topConflictGroups: getTopEntries(participantBattles.map((battle) => warNames.get(battle.warId) ?? battle.warId)),
     sampleEvents: participantBattles.slice(0, detailSampleLimit),
   };
 }
@@ -231,7 +292,6 @@ function getEdgeDetail(
   edge: ParticipantNetworkEdge,
   battles: Battle[],
   participantNames: Map<string, string>,
-  warNames: Map<string, string>,
 ): EdgeDetail {
   const sharedBattles = battles
     .filter((battle) => battle.participants.includes(edge.source) && battle.participants.includes(edge.target))
@@ -246,7 +306,6 @@ function getEdgeDetail(
     opponentCount: edge.opponentWeight,
     cooccurrenceCount: edge.cooccurrenceWeight,
     yearRange: formatYearRange(sharedBattles),
-    topConflictGroups: getTopEntries(sharedBattles.map((battle) => warNames.get(battle.warId) ?? battle.warId)),
     sampleEvents: sharedBattles.slice(0, detailSampleLimit),
   };
 }
@@ -333,34 +392,36 @@ function positionNodes(nodes: ParticipantNetworkNode[], focusedParticipantId: st
 
 export function NetworkView({
   battles,
-  wars,
   participants,
   selectedParticipant,
+  highlightedParticipantIds,
   onSelectParticipant,
+  onSelectBattle,
   onResetFilters,
 }: NetworkViewProps) {
   const [inspectedEdgeKey, setInspectedEdgeKey] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"network" | "matrix">("network");
+  const [viewport, setViewport] = useState<NetworkViewport>(defaultViewport);
+  const [tooltip, setTooltip] = useState<NetworkTooltip | null>(null);
+  const networkStageRef = useRef<HTMLDivElement | null>(null);
+  const panStartRef = useRef<{ clientX: number; clientY: number; x: number; y: number } | null>(null);
   const participantNames = useMemo(
     () => new Map(participants.map((participant) => [participant.id, participant.name])),
     [participants],
-  );
-  const warNames = useMemo(
-    () => new Map(wars.map((war) => [war.id, war.name])),
-    [wars],
   );
   const network = useMemo(
     () => buildParticipantNetwork(battles, maxVisibleNodes, { focusedParticipantId: selectedParticipant }),
     [battles, selectedParticipant],
   );
   const nodes = useMemo(() => positionNodes(network.nodes, selectedParticipant), [network.nodes, selectedParticipant]);
+  const fitViewport = useMemo(() => getFitViewport(nodes), [nodes]);
   const heatmapRows = useMemo(
     () => network.nodes.slice(0, heatmapRowLimit),
     [network.nodes],
   );
   const participantHeatmap = useMemo(
-    () => buildParticipantHeatmap(battles, heatmapRows, warNames),
-    [battles, heatmapRows, warNames],
+    () => buildParticipantHeatmap(battles, heatmapRows),
+    [battles, heatmapRows],
   );
   const visibleLabelNodeIds = useMemo(
     () => new Set(network.nodes.slice(0, visibleLabelLimit).map((node) => node.id)),
@@ -370,6 +431,11 @@ export function NetworkView({
   const edges = network.edges.slice(0, maxVisibleEdges);
   const maxEdgeWeight = Math.max(1, ...edges.map((edge) => edge.weight));
   const selectionVisible = selectedParticipant ? nodeLookup.has(selectedParticipant) : false;
+  const highlightedParticipantIdSet = useMemo(
+    () => new Set(highlightedParticipantIds),
+    [highlightedParticipantIds],
+  );
+  const highlightedParticipantKey = highlightedParticipantIds.slice().sort().join("|");
   const selectedParticipantName = selectedParticipant ? getParticipantName(selectedParticipant, participantNames) : null;
   const focusedNodeIds = useMemo(() => {
     if (!selectionVisible || !selectedParticipant) {
@@ -391,17 +457,22 @@ export function NetworkView({
   const selectedParticipantDetail = useMemo(
     () =>
       selectedParticipant
-        ? getParticipantDetail(selectedParticipant, battles, participantNames, warNames, network.nodes.find((node) => node.id === selectedParticipant))
+        ? getParticipantDetail(
+            selectedParticipant,
+            battles,
+            participantNames,
+            network.nodes.find((node) => node.id === selectedParticipant),
+          )
         : null,
-    [battles, network.nodes, participantNames, selectedParticipant, warNames],
+    [battles, network.nodes, participantNames, selectedParticipant],
   );
   const inspectedEdge = useMemo(
     () => edges.find((edge) => getEdgeKey(edge.source, edge.target) === inspectedEdgeKey) ?? null,
     [edges, inspectedEdgeKey],
   );
   const inspectedEdgeDetail = useMemo(
-    () => inspectedEdge ? getEdgeDetail(inspectedEdge, battles, participantNames, warNames) : null,
-    [battles, inspectedEdge, participantNames, warNames],
+    () => inspectedEdge ? getEdgeDetail(inspectedEdge, battles, participantNames) : null,
+    [battles, inspectedEdge, participantNames],
   );
 
   useEffect(() => {
@@ -413,6 +484,91 @@ export function NetworkView({
       setInspectedEdgeKey(null);
     }
   }, [edges, inspectedEdgeKey]);
+
+  useEffect(() => {
+    setViewport(fitViewport);
+    setTooltip(null);
+  }, [activeView, battles, fitViewport]);
+
+  useEffect(() => {
+    setViewport(fitViewport);
+  }, [fitViewport, highlightedParticipantKey, selectedParticipant]);
+
+  function showTooltip(
+    event: ReactPointerEvent<SVGElement>,
+    title: string,
+    lines: string[],
+  ) {
+    const bounds = networkStageRef.current?.getBoundingClientRect();
+    if (!bounds) {
+      return;
+    }
+
+    setTooltip({
+      x: Math.min(Math.max(event.clientX - bounds.left + 12, 12), bounds.width - 260),
+      y: Math.min(Math.max(event.clientY - bounds.top + 12, 12), bounds.height - 120),
+      title,
+      lines,
+    });
+  }
+
+  function zoomViewport(factor: number, focalPoint = { x: centerX, y: centerY }) {
+    setViewport((current) => {
+      const scale = Math.min(maxViewportScale, Math.max(minViewportScale, current.scale * factor));
+      const ratio = scale / current.scale;
+
+      return clampViewport({
+        scale,
+        x: focalPoint.x - (focalPoint.x - current.x) * ratio,
+        y: focalPoint.y - (focalPoint.y - current.y) * ratio,
+      });
+    });
+  }
+
+  function handleWheel(event: ReactWheelEvent<SVGSVGElement>) {
+    event.preventDefault();
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const focalPoint = {
+      x: ((event.clientX - bounds.left) / bounds.width) * viewBoxWidth,
+      y: ((event.clientY - bounds.top) / bounds.height) * viewBoxHeight,
+    };
+    zoomViewport(event.deltaY < 0 ? 1.12 : 0.89, focalPoint);
+  }
+
+  function handlePanStart(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    panStartRef.current = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      x: viewport.x,
+      y: viewport.y,
+    };
+  }
+
+  function handlePanMove(event: ReactPointerEvent<SVGSVGElement>) {
+    const panStart = panStartRef.current;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (!panStart || bounds.width === 0 || bounds.height === 0) {
+      return;
+    }
+
+    setViewport((current) => clampViewport({
+      ...current,
+      x: panStart.x + ((event.clientX - panStart.clientX) / bounds.width) * viewBoxWidth,
+      y: panStart.y + ((event.clientY - panStart.clientY) / bounds.height) * viewBoxHeight,
+    }));
+  }
+
+  function handlePanEnd(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    panStartRef.current = null;
+  }
 
   return (
     <section id="network-view" className="view-panel network-panel">
@@ -441,7 +597,7 @@ export function NetworkView({
         <div className="empty-state empty-state-with-action">
           <p>
             {selectedParticipantName
-              ? `${selectedParticipantName} 在当前 conflict group 和年份范围内没有可展示的网络事件。`
+              ? `${selectedParticipantName} 在当前年份范围内没有可展示的网络事件。`
               : "当前筛选条件下没有可展示的参战方网络。"}
           </p>
           {selectedParticipantName ? (
@@ -478,13 +634,34 @@ export function NetworkView({
             </button>
           </div>
           <div className="network-visual-grid network-single-view">
-            {activeView === "network" ? <div className="network-stage">
+            {activeView === "network" ? <div ref={networkStageRef} className="network-stage">
+              <div className="network-toolbar" aria-label="网络画布控制">
+                <button type="button" onClick={() => zoomViewport(1.2)} title="放大网络">
+                  <ZoomIn size={17} />
+                </button>
+                <button type="button" onClick={() => zoomViewport(0.84)} title="缩小网络">
+                  <ZoomOut size={17} />
+                </button>
+                <button type="button" onClick={() => setViewport(fitViewport)} title="适配当前网络内容">
+                  <Maximize2 size={17} />
+                </button>
+                <button type="button" onClick={() => setViewport(defaultViewport)} title="重置网络视图">
+                  <RotateCcw size={17} />
+                </button>
+                <output>{Math.round(viewport.scale * 100)}%</output>
+              </div>
               <svg
                 className="network-svg"
                 viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
                 role="img"
                 aria-label="参战方共现网络"
+                onWheel={handleWheel}
+                onPointerDown={handlePanStart}
+                onPointerMove={handlePanMove}
+                onPointerUp={handlePanEnd}
+                onPointerCancel={handlePanEnd}
               >
+                <g transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`}>
                 <g className="network-edges">
                   {edges.map((edge) => {
                     const source = nodeLookup.get(edge.source);
@@ -497,10 +674,12 @@ export function NetworkView({
                     const edgeKey = getEdgeKey(edge.source, edge.target);
                     const connectedToSelection =
                       !selectionVisible || edge.source === selectedParticipant || edge.target === selectedParticipant;
-                    const edgeDetail = getEdgeDetail(edge, battles, participantNames, warNames);
+                    const edgeDetail = getEdgeDetail(edge, battles, participantNames);
                     const edgeOpacity = connectedToSelection
                       ? 0.28 + (edge.weight / maxEdgeWeight) * 0.62
                       : 0.08;
+                    const highlightedByEvent =
+                      highlightedParticipantIdSet.has(edge.source) && highlightedParticipantIdSet.has(edge.target);
 
                     return (
                       <line
@@ -508,6 +687,7 @@ export function NetworkView({
                         className={[
                           connectedToSelection ? `network-edge ${edge.relation}` : `network-edge ${edge.relation} muted`,
                           inspectedEdgeKey === edgeKey ? "active" : "",
+                          highlightedByEvent ? "event-highlighted" : "",
                         ].join(" ")}
                         x1={source.x}
                         y1={source.y}
@@ -519,6 +699,21 @@ export function NetworkView({
                         tabIndex={0}
                         aria-label={`${edgeDetail.sourceName} 与 ${edgeDetail.targetName}：${getRelationLabel(edge.relation)}，${edge.weight} 次相关事件`}
                         onClick={() => setInspectedEdgeKey(inspectedEdgeKey === edgeKey ? null : edgeKey)}
+                        onPointerEnter={(event) =>
+                          showTooltip(event, `${edgeDetail.sourceName} + ${edgeDetail.targetName}`, [
+                            `${getRelationLabel(edge.relation)} · ${edge.weight} 次相关事件`,
+                            `同阵营 ${edgeDetail.allyCount} / 对立 ${edgeDetail.opponentCount} / 普通共现 ${edgeDetail.cooccurrenceCount}`,
+                            `年份 ${edgeDetail.yearRange}`,
+                          ])
+                        }
+                        onPointerMove={(event) =>
+                          showTooltip(event, `${edgeDetail.sourceName} + ${edgeDetail.targetName}`, [
+                            `${getRelationLabel(edge.relation)} · ${edge.weight} 次相关事件`,
+                            `同阵营 ${edgeDetail.allyCount} / 对立 ${edgeDetail.opponentCount} / 普通共现 ${edgeDetail.cooccurrenceCount}`,
+                            `年份 ${edgeDetail.yearRange}`,
+                          ])
+                        }
+                        onPointerLeave={() => setTooltip(null)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
@@ -543,6 +738,7 @@ export function NetworkView({
                     const muted = selectionVisible && !focusedNodeIds.has(node.id);
                     const inspected =
                       inspectedEdge && (inspectedEdge.source === node.id || inspectedEdge.target === node.id);
+                    const highlightedByEvent = highlightedParticipantIdSet.has(node.id);
                     const showLabel =
                       visibleLabelNodeIds.has(node.id) || selected || Boolean(inspected) || (selectionVisible && index < 12);
 
@@ -555,12 +751,28 @@ export function NetworkView({
                           selected ? "active" : "",
                           muted ? "muted" : "",
                           inspected ? "inspected" : "",
+                          highlightedByEvent ? "event-highlighted" : "",
                         ].join(" ")}
                         role="button"
                         tabIndex={0}
                         aria-label={`${participantName}：${getSideLabel(node.side)}，${node.eventCount} 条冲突事件`}
                         aria-pressed={selected}
                         onClick={() => onSelectParticipant(selected ? null : node.id)}
+                        onPointerEnter={(event) =>
+                          showTooltip(event, participantName, [
+                            `${getSideLabel(node.side)} · ${node.eventCount} 条事件`,
+                            `胜方 ${node.winnerCount} / 败方 ${node.loserCount} / 未判定 ${node.neutralCount}`,
+                            highlightedByEvent ? "属于当前选中事件" : "点击可筛选此参战方",
+                          ])
+                        }
+                        onPointerMove={(event) =>
+                          showTooltip(event, participantName, [
+                            `${getSideLabel(node.side)} · ${node.eventCount} 条事件`,
+                            `胜方 ${node.winnerCount} / 败方 ${node.loserCount} / 未判定 ${node.neutralCount}`,
+                            highlightedByEvent ? "属于当前选中事件" : "点击可筛选此参战方",
+                          ])
+                        }
+                        onPointerLeave={() => setTooltip(null)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
@@ -591,12 +803,19 @@ export function NetworkView({
                     );
                   })}
                 </g>
+                </g>
               </svg>
+              {tooltip ? (
+                <div className="network-tooltip" style={{ left: tooltip.x, top: tooltip.y }} role="status">
+                  <strong>{tooltip.title}</strong>
+                  {tooltip.lines.map((line) => <span key={line}>{line}</span>)}
+                </div>
+              ) : null}
             </div> : null}
             {activeView === "matrix" && participantHeatmap.rows.length > 0 && participantHeatmap.columns.length > 0 ? (
               <div className="network-heatmap-panel">
                 <div className="network-heatmap-heading">
-                  <h3>参战方-冲突组事件热力图</h3>
+                  <h3>参战方-年份阶段事件热力图</h3>
                   <span>颜色越深表示事件数越多</span>
                 </div>
                 <svg
@@ -605,7 +824,7 @@ export function NetworkView({
                     heatmapLeftMargin + participantHeatmap.columns.length * heatmapCellSize + heatmapRightMargin
                   } ${heatmapTopMargin + participantHeatmap.rows.length * heatmapCellSize + heatmapBottomMargin}`}
                   role="img"
-                  aria-label="参战方和冲突组事件数热力图"
+                  aria-label="参战方和年份阶段事件数热力图"
                 >
                   {participantHeatmap.columns.map((column, columnIndex) => (
                     <text
@@ -715,12 +934,13 @@ export function NetworkView({
           </div>
           <p className="network-footnote">
             当前显示 {nodes.length} 个活跃参战方和 {edges.length} 条较强共现关系。
+            边宽按相关事件数相对缩放，越粗表示两个参战方共同出现或处于关联阵营的事件越多。
             节点颜色与边类别优先使用 winner/loser 字段判断；缺少阵营信息时保留为未判定或普通共现。
             {selectedParticipant && selectionVisible
               ? ` 已聚焦 ${selectedParticipantName} 及其最强一阶邻居。`
               : ""}
             {selectedParticipant && !selectionVisible && nodes.length > 0
-              ? ` ${selectedParticipantName} 当前不在可见网络中，请调整 conflict group 或年份范围。`
+              ? ` ${selectedParticipantName} 当前不在可见网络中，请调整年份范围。`
               : ""}
           </p>
           {(selectedParticipantDetail || inspectedEdgeDetail) ? (
@@ -748,18 +968,14 @@ export function NetworkView({
                       <dt>活跃年份</dt>
                       <dd>{selectedParticipantDetail.yearRange}</dd>
                     </div>
-                    <div>
-                      <dt>主要冲突组</dt>
-                      <dd>
-                        {selectedParticipantDetail.topConflictGroups
-                          .map(([group, count]) => `${group} (${count})`)
-                          .join(", ")}
-                      </dd>
-                    </div>
                   </dl>
-                  <ul>
+                  <ul className="network-sample-events">
                     {selectedParticipantDetail.sampleEvents.map((battle) => (
-                      <li key={battle.id}>{battle.year}: {battle.name}</li>
+                      <li key={battle.id}>
+                        <button type="button" onClick={() => onSelectBattle(battle.id)}>
+                          {battle.year}: {battle.name}
+                        </button>
+                      </li>
                     ))}
                   </ul>
                   <button className="secondary-action-button compact" type="button" onClick={() => onSelectParticipant(null)}>
@@ -790,18 +1006,14 @@ export function NetworkView({
                       <dt>共现年份</dt>
                       <dd>{inspectedEdgeDetail.yearRange}</dd>
                     </div>
-                    <div>
-                      <dt>主要冲突组</dt>
-                      <dd>
-                        {inspectedEdgeDetail.topConflictGroups
-                          .map(([group, count]) => `${group} (${count})`)
-                          .join(", ")}
-                      </dd>
-                    </div>
                   </dl>
-                  <ul>
+                  <ul className="network-sample-events">
                     {inspectedEdgeDetail.sampleEvents.map((battle) => (
-                      <li key={battle.id}>{battle.year}: {battle.name}</li>
+                      <li key={battle.id}>
+                        <button type="button" onClick={() => onSelectBattle(battle.id)}>
+                          {battle.year}: {battle.name}
+                        </button>
+                      </li>
                     ))}
                   </ul>
                   <button className="secondary-action-button compact" type="button" onClick={() => setInspectedEdgeKey(null)}>

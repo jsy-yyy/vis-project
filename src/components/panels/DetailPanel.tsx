@@ -1,11 +1,17 @@
+import { LocateFixed, Lock, Trash2, Unlock } from "lucide-react";
 import { Info } from "lucide-react";
-import type { Battle, Participant, War } from "../../types/domain";
+import type { Battle, Participant } from "../../types/domain";
 
 type DetailPanelProps = {
   battle: Battle | null;
-  wars: War[];
   participants: Participant[];
   emptyMessage?: string | null;
+  locked?: boolean;
+  outOfScope?: boolean;
+  outOfMapYear?: boolean;
+  onToggleLock?: () => void;
+  onClearSelection?: () => void;
+  onJumpToEvent?: () => void;
 };
 
 function lookupName(id: string, rows: Array<{ id: string; name: string }>) {
@@ -46,7 +52,17 @@ function shouldShowMapTarget(actor: NonNullable<Battle["actors"]>[number]) {
   return Boolean(actor.mapTarget && actor.mapTarget !== actor.name);
 }
 
-export function DetailPanel({ battle, wars, participants, emptyMessage }: DetailPanelProps) {
+export function DetailPanel({
+  battle,
+  participants,
+  emptyMessage,
+  locked = false,
+  outOfScope = false,
+  outOfMapYear = false,
+  onToggleLock,
+  onClearSelection,
+  onJumpToEvent,
+}: DetailPanelProps) {
   return (
     <section className="side-panel detail-panel">
       <div className="section-heading">
@@ -57,13 +73,35 @@ export function DetailPanel({ battle, wars, participants, emptyMessage }: Detail
         <div className="empty-state">{emptyMessage ?? "请选择一个冲突事件以查看字段详情。"}</div>
       ) : (
         <>
-          <h3>{battle.name}</h3>
+          <div className="detail-title-row">
+            <h3>{battle.name}</h3>
+            {locked ? <span className="detail-lock-badge"><Lock size={14} />已锁定</span> : null}
+          </div>
+          {outOfScope || outOfMapYear ? (
+            <div className="detail-scope-notice" role="status">
+              {outOfScope
+                ? "此事件当前不在筛选结果中，锁定状态保留了详情。"
+                : "此事件不在当前地图年份中，锁定状态保留了详情。"}
+            </div>
+          ) : null}
+          <div className="detail-actions">
+            <button className="secondary-action-button compact" type="button" onClick={onToggleLock}>
+              {locked ? <Unlock size={15} /> : <Lock size={15} />}
+              {locked ? "解锁事件" : "锁定事件"}
+            </button>
+            {(outOfScope || outOfMapYear) ? (
+              <button className="secondary-action-button compact" type="button" onClick={onJumpToEvent}>
+                <LocateFixed size={15} />
+                跳转到事件年份
+              </button>
+            ) : null}
+            <button className="secondary-action-button compact" type="button" onClick={onClearSelection}>
+              <Trash2 size={15} />
+              清除选择
+            </button>
+          </div>
           <p>{battle.description}</p>
           <dl className="detail-list">
-            <div>
-              <dt>冲突组 conflict group</dt>
-              <dd>{lookupName(battle.warId, wars)}</dd>
-            </div>
             <div>
               <dt>时间</dt>
               <dd>

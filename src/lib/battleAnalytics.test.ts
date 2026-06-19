@@ -38,9 +38,8 @@ const battles = [
 ];
 
 describe("battle analytics", () => {
-  it("filters battles by war, year range, and selected participant", () => {
+  it("filters battles by year range and selected participant", () => {
     const filtered = filterBattles(battles, {
-      selectedWarId: "napoleonic-wars",
       selectedYearRange: [1813, 1815],
       selectedParticipant: "france",
     });

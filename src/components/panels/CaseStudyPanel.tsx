@@ -2,7 +2,7 @@ import { BookOpen } from "lucide-react";
 import type { YearRange } from "../../types/domain";
 
 type CaseStudyPanelProps = {
-  onApplyCaseStudy: (warId: string, range: YearRange) => void;
+  onApplyCaseStudy: (range: YearRange, label: string) => void;
 };
 
 export function CaseStudyPanel({ onApplyCaseStudy }: CaseStudyPanelProps) {
@@ -15,7 +15,7 @@ export function CaseStudyPanel({ onApplyCaseStudy }: CaseStudyPanelProps) {
       <div className="case-study-list">
         <button
           type="button"
-          onClick={() => onApplyCaseStudy("world-war-i", [1914, 1918])}
+          onClick={() => onApplyCaseStudy([1914, 1918], "World War I")}
         >
           <strong>World War I</strong>
           <span>查看 1914-1918 年全球冲突窗口中的 HCED 事件。</span>
@@ -23,7 +23,7 @@ export function CaseStudyPanel({ onApplyCaseStudy }: CaseStudyPanelProps) {
         </button>
         <button
           type="button"
-          onClick={() => onApplyCaseStudy("world-war-ii", [1939, 1945])}
+          onClick={() => onApplyCaseStudy([1939, 1945], "World War II")}
         >
           <strong>World War II</strong>
           <span>结合历史国家边界追踪 1939-1945 年的全球事件点。</span>

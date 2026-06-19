@@ -1,31 +1,30 @@
 import { Activity } from "lucide-react";
 import { getLimitedEntries } from "../../lib/appState";
-import type { BattleSummary, Participant, War } from "../../types/domain";
+import type { BattleSummary, Participant } from "../../types/domain";
 
 type StatisticsPanelProps = {
   summary: BattleSummary;
-  wars: War[];
   participants: Participant[];
+  selectedParticipant: string | null;
+  onParticipantSelect: (participantId: string | null) => void;
 };
 
 function lookupName(id: string, rows: Array<{ id: string; name: string }>) {
   return rows.find((row) => row.id === id)?.name ?? id;
 }
 
-export function StatisticsPanel({ summary, wars, participants }: StatisticsPanelProps) {
+export function StatisticsPanel({
+  summary,
+  participants,
+  selectedParticipant,
+  onParticipantSelect,
+}: StatisticsPanelProps) {
   const maxTypeCount = Math.max(1, ...Object.values(summary.battlesByType));
   const topParticipants = getLimitedEntries(summary.topParticipants, 5);
   const rankedEventTypes = getLimitedEntries(
     Object.entries(summary.battlesByType).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
     8,
   );
-  const rankedConflictGroups = getLimitedEntries(
-    Object.entries(summary.battlesByWar).sort(
-      (a, b) => b[1] - a[1] || lookupName(a[0], wars).localeCompare(lookupName(b[0], wars)),
-    ),
-    8,
-  );
-
   return (
     <section className="side-panel">
       <div className="section-heading">
@@ -48,10 +47,16 @@ export function StatisticsPanel({ summary, wars, participants }: StatisticsPanel
           <div className="compact-empty">当前筛选下暂无参战方。</div>
         ) : null}
         {topParticipants.visibleEntries.map(([participantId, count]) => (
-          <div className="rank-row" key={participantId}>
+          <button
+            className={participantId === selectedParticipant ? "rank-row interactive active" : "rank-row interactive"}
+            key={participantId}
+            type="button"
+            aria-pressed={participantId === selectedParticipant}
+            onClick={() => onParticipantSelect(participantId === selectedParticipant ? null : participantId)}
+          >
             <span>{lookupName(participantId, participants)}</span>
             <strong>{count}</strong>
-          </div>
+          </button>
         ))}
         {topParticipants.hiddenCount > 0 ? (
           <div className="muted-note">还有 {topParticipants.hiddenCount} 个参战方</div>
@@ -73,21 +78,6 @@ export function StatisticsPanel({ summary, wars, participants }: StatisticsPanel
         ))}
         {rankedEventTypes.hiddenCount > 0 ? (
           <div className="muted-note">还有 {rankedEventTypes.hiddenCount} 种事件类型</div>
-        ) : null}
-      </div>
-      <div className="mini-section">
-        <h3>冲突组 conflict group</h3>
-        {rankedConflictGroups.visibleEntries.length === 0 ? (
-          <div className="compact-empty">当前筛选下暂无冲突组。</div>
-        ) : null}
-        {rankedConflictGroups.visibleEntries.map(([warId, count]) => (
-          <div className="rank-row" key={warId}>
-            <span>{lookupName(warId, wars)}</span>
-            <strong>{count}</strong>
-          </div>
-        ))}
-        {rankedConflictGroups.hiddenCount > 0 ? (
-          <div className="muted-note">还有 {rankedConflictGroups.hiddenCount} 个冲突组</div>
         ) : null}
       </div>
     </section>
