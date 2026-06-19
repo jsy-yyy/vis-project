@@ -1,5 +1,6 @@
 import { Activity } from "lucide-react";
 import { getLimitedEntries } from "../../lib/appState";
+import { getCompactTypeBreakdown } from "../../lib/battleAnalytics";
 import type { BattleSummary, Participant } from "../../types/domain";
 
 type StatisticsPanelProps = {
@@ -19,12 +20,12 @@ export function StatisticsPanel({
   selectedParticipant,
   onParticipantSelect,
 }: StatisticsPanelProps) {
-  const maxTypeCount = Math.max(1, ...Object.values(summary.battlesByType));
   const topParticipants = getLimitedEntries(summary.topParticipants, 5);
-  const rankedEventTypes = getLimitedEntries(
-    Object.entries(summary.battlesByType).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
-    8,
+  const maxParticipantCount = Math.max(
+    1,
+    ...topParticipants.visibleEntries.map(([, count]) => count),
   );
+  const compactEventTypes = getCompactTypeBreakdown(summary.battlesByType);
   return (
     <section className="side-panel">
       <div className="section-heading">
@@ -42,7 +43,7 @@ export function StatisticsPanel({
         </div>
       </div>
       <div className="mini-section">
-        <h3>活跃参战方 participant</h3>
+        <h3>活跃参战方</h3>
         {topParticipants.visibleEntries.length === 0 ? (
           <div className="compact-empty">当前筛选下暂无参战方。</div>
         ) : null}
@@ -54,7 +55,10 @@ export function StatisticsPanel({
             aria-pressed={participantId === selectedParticipant}
             onClick={() => onParticipantSelect(participantId === selectedParticipant ? null : participantId)}
           >
-            <span>{lookupName(participantId, participants)}</span>
+            <span className="rank-row-label">{lookupName(participantId, participants)}</span>
+            <span className="rank-row-bar" aria-hidden="true">
+              <i style={{ width: `${(count / maxParticipantCount) * 100}%` }} />
+            </span>
             <strong>{count}</strong>
           </button>
         ))}
@@ -63,22 +67,33 @@ export function StatisticsPanel({
         ) : null}
       </div>
       <div className="mini-section">
-        <h3>事件类型</h3>
-        {rankedEventTypes.visibleEntries.length === 0 ? (
+        <h3>事件类型构成</h3>
+        {compactEventTypes.length === 0 ? (
           <div className="compact-empty">当前筛选下暂无事件类型。</div>
-        ) : null}
-        {rankedEventTypes.visibleEntries.map(([type, count]) => (
-          <div className="bar-row" key={type}>
-            <span>{type}</span>
-            <div className="bar-shell">
-              <div className="bar-fill" style={{ width: `${(count / maxTypeCount) * 100}%` }} />
+        ) : (
+          <>
+            <div className="type-share-bar" aria-label="事件类型百分比构成">
+              {compactEventTypes.map((entry, index) => (
+                <span
+                  key={entry.type}
+                  className={`segment-${index % 6}`}
+                  style={{ width: `${entry.percentage}%` }}
+                  title={`${entry.type}: ${entry.count} 条（${entry.percentage.toFixed(1)}%）`}
+                />
+              ))}
             </div>
-            <strong>{count}</strong>
-          </div>
-        ))}
-        {rankedEventTypes.hiddenCount > 0 ? (
-          <div className="muted-note">还有 {rankedEventTypes.hiddenCount} 种事件类型</div>
-        ) : null}
+            <div className="type-share-legend">
+              {compactEventTypes.map((entry, index) => (
+                <div key={entry.type}>
+                  <i className={`segment-${index % 6}`} />
+                  <span>{entry.type}</span>
+                  <strong>{entry.count}</strong>
+                  <small>{entry.percentage.toFixed(1)}%</small>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   );
