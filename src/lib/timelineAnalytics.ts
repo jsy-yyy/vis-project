@@ -1,4 +1,4 @@
-import type { Battle, YearRange } from "../types/domain";
+import type { AnalysisMode, Battle, YearRange } from "../types/domain";
 
 export type YearlyEventCount = {
   year: number;
@@ -18,6 +18,34 @@ export type TimelinePeriodComparison = {
   previousCount: number;
   nextRange: YearRange | null;
   nextCount: number;
+};
+
+export type TimelineChartBar = {
+  key: string;
+  label: string;
+  count: number;
+  current?: boolean;
+};
+
+export type TimelineStackSegment = {
+  key: string;
+  label: string;
+  count: number;
+};
+
+export type TimelineStackBar = {
+  key: string;
+  label: string;
+  count: number;
+  segments: TimelineStackSegment[];
+  current?: boolean;
+};
+
+export type TimelineChartSummary = {
+  mode: "year-type" | "month" | "type";
+  title: string;
+  bars: TimelineStackBar[];
+  legend: string[];
 };
 
 export function getYearlyEventCounts(
@@ -110,5 +138,99 @@ export function getTimelinePeriodComparison(
     previousCount: countInRange(previousRange),
     nextRange,
     nextCount: countInRange(nextRange),
+  };
+}
+
+export function getTimelineChartSummary(
+  battles: Battle[],
+  analysisMode: AnalysisMode,
+  currentYear: number,
+  selectedYearRange: YearRange,
+  _allYearRange: YearRange,
+): TimelineChartSummary {
+  const scopedBattles = battles.filter((battle) =>
+    analysisMode === "range"
+      ? battle.year >= selectedYearRange[0] && battle.year <= selectedYearRange[1]
+      : battle.year === currentYear,
+  );
+  const typeCounts = new Map<string, number>();
+
+  for (const battle of scopedBattles) {
+    const type = battle.type ?? "Unknown";
+    typeCounts.set(type, (typeCounts.get(type) ?? 0) + 1);
+  }
+
+  if (analysisMode === "range") {
+    const rankedTypes = Array.from(typeCounts.entries())
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .map(([type]) => type);
+    const visibleTypes = rankedTypes.slice(0, 5);
+    const hasOther = rankedTypes.length > visibleTypes.length;
+    const legend = hasOther ? [...visibleTypes, "其他"] : visibleTypes;
+
+    return {
+      mode: "year-type",
+      title: "年度事件趋势与类型构成",
+      legend,
+      bars: getYearlyEventCounts(scopedBattles, selectedYearRange).map(({ year, count }) => {
+        const yearBattles = scopedBattles.filter((battle) => battle.year === year);
+        const segments = legend.map((label) => {
+          const segmentCount = label === "其他"
+            ? yearBattles.filter((battle) => !visibleTypes.includes(battle.type ?? "Unknown")).length
+            : yearBattles.filter((battle) => (battle.type ?? "Unknown") === label).length;
+
+          return { key: `${year}-${label}`, label, count: segmentCount };
+        });
+
+        return {
+          key: String(year),
+          label: String(year),
+          count,
+          segments,
+          current: year === currentYear,
+        };
+      }),
+    };
+  }
+
+  const monthFormatter = new Intl.DateTimeFormat("zh-CN", { month: "short" });
+  const getMonth = (battle: Battle) => {
+    const match = battle.startDate?.match(/^\d{4}-(\d{1,2})(?:-\d{1,2})?$/);
+    const month = match ? Number(match[1]) : Number.NaN;
+    return month >= 1 && month <= 12 ? month : null;
+  };
+  const datedBattles = scopedBattles.map((battle) => ({ battle, month: getMonth(battle) }));
+
+  if (scopedBattles.length > 0 && datedBattles.every(({ month }) => month !== null)) {
+    return {
+      mode: "month",
+      title: `${currentYear} 年月份分布`,
+      legend: ["事件数"],
+      bars: Array.from({ length: 12 }, (_, index) => {
+        const month = index + 1;
+        const count = datedBattles.filter((item) => item.month === month).length;
+        return {
+          key: String(month),
+          label: monthFormatter.format(new Date(currentYear, index, 1)),
+          count,
+          segments: [{ key: `${month}-events`, label: "事件数", count }],
+        };
+      }),
+    };
+  }
+
+  const rankedTypes = Array.from(typeCounts.entries())
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+
+  return {
+    mode: "type",
+    title: `${currentYear} 年事件类型分布`,
+    legend: rankedTypes.map(([type]) => type),
+    bars: rankedTypes.map(([type, count]) => ({
+      key: type,
+      label: type,
+      count,
+      segments: [{ key: type, label: type, count }],
+    })),
   };
 }
