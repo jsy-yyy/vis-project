@@ -1374,7 +1374,7 @@ h1 {
 .network-legend .event {
   width: 0.8rem;
   height: 0.8rem;
-  border: 2px dashed var(--cyan);
+  border: 2px dashed var(--gold);
   border-radius: 50%;
 }
 
@@ -1665,7 +1665,7 @@ g:focus-visible .participant-heatmap-rect {
 
 .network-edge.event-highlighted {
   opacity: 1;
-  stroke: var(--cyan);
+  stroke: var(--gold);
   stroke-dasharray: 5 4;
 }
 
@@ -1737,7 +1737,7 @@ g:focus-visible .participant-heatmap-rect {
 
 .network-svg-node.event-highlighted circle {
   fill-opacity: 1;
-  stroke: var(--cyan);
+  stroke: var(--gold);
   stroke-dasharray: 4 3;
   stroke-width: 5;
 }
@@ -3560,6 +3560,65 @@ g:focus-visible .participant-heatmap-rect {
   overflow-y: hidden;
 }
 
+.timeline-year-pies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+
+.timeline-year-pie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid rgba(230, 236, 233, 0.08);
+  border-radius: 0.65rem;
+  background: rgba(11, 15, 18, 0.3);
+}
+
+.timeline-year-pie.current {
+  border-color: rgba(241, 184, 107, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(241, 184, 107, 0.16);
+}
+
+.timeline-pie-disc {
+  width: 6rem;
+  height: 6rem;
+  flex: 0 0 6rem;
+  border: 2px solid rgba(230, 236, 233, 0.12);
+  border-radius: 50%;
+  box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.18);
+}
+
+.timeline-pie-disc.empty {
+  border-style: dashed;
+  background: rgba(230, 236, 233, 0.06);
+  box-shadow: none;
+}
+
+.timeline-pie-label {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.timeline-pie-label strong {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.timeline-year-pie.current .timeline-pie-label strong {
+  color: var(--gold);
+}
+
+.timeline-pie-label small {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
 .timeline-stacked-bar {
   display: grid;
   flex: 1 0 1.5rem;
@@ -3809,6 +3868,10 @@ g:focus-visible .participant-heatmap-rect {
 @media (max-width: 720px) {
   .timeline-stacked-bars {
     height: 9rem;
+  }
+
+  .timeline-year-pies {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .detail-fact-band,

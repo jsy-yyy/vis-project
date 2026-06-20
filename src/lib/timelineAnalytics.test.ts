@@ -50,9 +50,9 @@ describe("timeline analytics", () => {
     });
   });
 
-  it("builds yearly stacked bars whose segments preserve yearly totals", () => {
+  it("builds one pie per year for a three-year range and preserves empty years", () => {
     expect(getTimelineChartSummary(battles, "range", 1940, [1940, 1942], [1940, 1942])).toEqual({
-      mode: "year-type",
+      mode: "year-type-pie",
       title: "年度事件趋势与类型构成",
       legend: ["Unknown"],
       bars: [
@@ -81,34 +81,63 @@ describe("timeline analytics", () => {
     });
   });
 
-  it("falls back to type distribution when a single year lacks valid months", () => {
+  it("uses one type-composition pie for a single year", () => {
     const summary = getTimelineChartSummary(battles, "single", 1940, [1940, 1940], [1940, 1942]);
     expect(summary).toMatchObject({
-      mode: "type",
-      title: "1940 年事件类型分布",
+      mode: "year-type-pie",
+      title: "年度事件趋势与类型构成",
       legend: ["Unknown"],
     });
-    expect(summary.bars[0]).toMatchObject({ label: "Unknown", count: 2 });
+    expect(summary.bars).toHaveLength(1);
+    expect(summary.bars[0]).toMatchObject({
+      label: "1940",
+      count: 2,
+      segments: [{ label: "Unknown", count: 2 }],
+    });
   });
 
-  it("uses month distribution when every event has a valid date", () => {
-    const datedBattles = battles.slice(0, 2).map((battle, index) => ({
-      ...battle,
-      startDate: index === 0 ? "1940-01-03" : "1940-02-04",
-    }));
-    const summary = getTimelineChartSummary(datedBattles, "single", 1940, [1940, 1940], [1940, 1942]);
-
-    expect(summary.mode).toBe("month");
-    expect(summary.bars.slice(0, 2).map((bar) => bar.count)).toEqual([1, 1]);
-    expect(summary.bars.reduce((sum, bar) => sum + bar.count, 0)).toBe(2);
+  it("uses one pie per year for a two-year range", () => {
+    const summary = getTimelineChartSummary(battles, "range", 1940, [1940, 1941], [1940, 1942]);
+    expect(summary.mode).toBe("year-type-pie");
+    expect(summary.bars.map((bar) => [bar.label, bar.count])).toEqual([
+      ["1940", 2],
+      ["1941", 0],
+    ]);
   });
 
-  it("returns an empty type chart without failing", () => {
+  it("keeps stacked bars for ranges of four years or more", () => {
+    const summary = getTimelineChartSummary(battles, "range", 1940, [1940, 1943], [1940, 1943]);
+    expect(summary.mode).toBe("year-type");
+    expect(summary.bars).toHaveLength(4);
+  });
+
+  it("keeps every pie segment total equal to its yearly total", () => {
+    const typedBattles = [
+      { ...battles[0], type: "Land" },
+      { ...battles[1], type: "Air" },
+      { ...battles[2], type: "Land" },
+    ];
+    const summary = getTimelineChartSummary(typedBattles, "range", 1940, [1940, 1942], [1940, 1942]);
+
+    for (const bar of summary.bars) {
+      expect(bar.segments.reduce((sum, segment) => sum + segment.count, 0)).toBe(bar.count);
+    }
+  });
+
+  it("returns an empty single-year pie without failing", () => {
     expect(getTimelineChartSummary([], "single", 1941, [1941, 1941], [1940, 1942])).toEqual({
-      mode: "type",
-      title: "1941 年事件类型分布",
+      mode: "year-type-pie",
+      title: "年度事件趋势与类型构成",
       legend: [],
-      bars: [],
+      bars: [
+        {
+          key: "1941",
+          label: "1941",
+          count: 0,
+          current: true,
+          segments: [],
+        },
+      ],
     });
   });
 });

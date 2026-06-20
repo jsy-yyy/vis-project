@@ -248,6 +248,57 @@ test("drills from a multi-year heat bubble into event details", async ({ page })
   await expect(page.locator(".network-event-status")).toContainText(/当前事件/);
 });
 
+test("centers a map-list event and keeps its flag popup from shifting the map", async ({ page }) => {
+  await page.goto("/?year=1913#map-view");
+  await page.getByPlaceholder("搜索事件、地点、类型、参战方").fill("Bregalnica");
+
+  const eventButton = page.locator(".map-list .list-link").filter({ hasText: "Bregalnica" });
+  await expect(eventButton).toHaveCount(1);
+  await eventButton.click();
+
+  await expect(page).toHaveURL(/event=Bregalnica1913/);
+  const marker = page.locator('.battle-marker[data-event-id="Bregalnica1913"]');
+  await expect(marker).toBeVisible();
+
+  await expect.poll(async () =>
+    page.evaluate(() => {
+      const map = document.querySelector(".leaflet-map")?.getBoundingClientRect();
+      const point = document
+        .querySelector('.battle-marker[data-event-id="Bregalnica1913"]')
+        ?.getBoundingClientRect();
+      if (!map || !point) {
+        return Number.POSITIVE_INFINITY;
+      }
+
+      const horizontalError = Math.abs(point.left + point.width / 2 - (map.left + map.width / 2));
+      const verticalError = Math.abs(point.top + point.height / 2 - (map.top + map.height / 2));
+      return Math.max(horizontalError, verticalError);
+    }),
+  ).toBeLessThanOrEqual(2);
+
+  const popup = visibleBattlePopup(page);
+  await expect(popup).toBeVisible();
+  await expectVisiblePopupFlag(popup, "/flags/iso/rs.svg");
+  await expectVisiblePopupFlag(popup, "/flags/iso/bg.svg");
+  await page.waitForTimeout(400);
+
+  const centerErrorAfterPopup = await page.evaluate(() => {
+    const map = document.querySelector(".leaflet-map")?.getBoundingClientRect();
+    const point = document
+      .querySelector('.battle-marker[data-event-id="Bregalnica1913"]')
+      ?.getBoundingClientRect();
+    if (!map || !point) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    return Math.max(
+      Math.abs(point.left + point.width / 2 - (map.left + map.width / 2)),
+      Math.abs(point.top + point.height / 2 - (map.top + map.height / 2)),
+    );
+  });
+  expect(centerErrorAfterPopup).toBeLessThanOrEqual(2);
+});
+
 test("opens the same flag matchup popup when double-clicking single- and multi-year event points", async ({ page }) => {
   await page.goto("/?year=1913#map-view");
   const singleHeatCell = page.locator('.density-bubble[data-event-ids~="Bregalnica1913"]');
@@ -288,18 +339,56 @@ test("expands details on demand and links an event to detail and network highlig
   await page.getByRole("button", { name: /展开分析/ }).click();
   await expect(page.locator("#timeline-details-content")).toBeVisible();
 
-  const firstEvent = page.locator(".timeline-track .timeline-item").first();
+  const timelineEvents = page.locator(".timeline-track .timeline-item");
+  expect(await timelineEvents.count()).toBeGreaterThanOrEqual(2);
+  const firstEvent = timelineEvents.nth(0);
   await expect(firstEvent).toBeVisible();
+  await firstEvent.scrollIntoViewIfNeeded();
+  const initialScrollY = await page.evaluate(() => window.scrollY);
+  const initialHash = await page.evaluate(() => window.location.hash);
   await firstEvent.click();
 
   await expect(page).toHaveURL(/event=/);
   await expect(page.locator(".detail-panel h3")).not.toBeEmpty();
   await expect(page.locator(".network-svg-node.event-highlighted").first()).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(initialScrollY);
+  expect(await page.evaluate(() => window.location.hash)).toBe(initialHash);
+
+  const secondEvent = page.locator(".timeline-track .timeline-item").nth(1);
+  await secondEvent.scrollIntoViewIfNeeded();
+  const secondInitialScrollY = await page.evaluate(() => window.scrollY);
+  const firstSelectedEvent = new URL(page.url()).searchParams.get("event");
+  await secondEvent.click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("event")).not.toBe(firstSelectedEvent);
+  await expect(page.locator(".network-svg-node.event-highlighted").first()).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(secondInitialScrollY);
+  expect(await page.evaluate(() => window.location.hash)).toBe(initialHash);
+});
+
+test("uses yellow dashed styling for current-event network highlights", async ({ page }) => {
+  await page.goto("/?year=1913&event=Bregalnica1913&locked=1#network-view");
+
+  const highlightedNode = page.locator(".network-svg-node.event-highlighted circle").first();
+  const highlightedEdge = page.locator(".network-edge.event-highlighted").first();
+  await expect(highlightedNode).toBeVisible();
+  await expect(highlightedEdge).toBeAttached();
+
+  expect(await highlightedNode.evaluate((node) => getComputedStyle(node).stroke)).toBe("rgb(241, 184, 107)");
+  expect(await highlightedNode.evaluate((node) => getComputedStyle(node).strokeDasharray)).not.toBe("none");
+  expect(await highlightedEdge.evaluate((edge) => getComputedStyle(edge).stroke)).toBe("rgb(241, 184, 107)");
+  expect(await highlightedEdge.evaluate((edge) => getComputedStyle(edge).strokeDasharray)).not.toBe("none");
+
+  const eventLegend = page.locator(".network-legend .event");
+  const allyLegend = page.locator(".network-legend .edge.ally");
+  expect(await eventLegend.evaluate((item) => getComputedStyle(item).borderTopColor)).toBe("rgb(241, 184, 107)");
+  expect(await allyLegend.evaluate((item) => getComputedStyle(item).borderTopColor)).toBe("rgb(120, 211, 242)");
 });
 
 test("renders visual timeline details and keeps analysis panels aligned", async ({ page }) => {
   await page.getByRole("button", { name: /展开分析/ }).click();
-  await expect(page.locator(".timeline-stacked-bars")).toBeVisible();
+  await expect(page.locator(".timeline-year-pies")).toBeVisible();
+  await expect(page.locator(".timeline-year-pie")).toHaveCount(1);
+  await expect(page.locator(".timeline-stacked-bars")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "主要参战方" })).toHaveCount(0);
   await expect(page.locator(".type-share-bar")).toBeVisible();
 
@@ -316,6 +405,24 @@ test("renders visual timeline details and keeps analysis panels aligned", async 
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test("switches between yearly pies and stacked bars at the three-year threshold", async ({ page }) => {
+  await page.goto("/?mode=multi&year=1900&start=1899&end=1901#timeline-details");
+  await page.getByRole("button", { name: /展开分析/ }).click();
+
+  const pies = page.locator(".timeline-year-pie");
+  await expect(pies).toHaveCount(3);
+  await expect(page.locator('.timeline-year-pie[data-year="1899"]')).toContainText("1899 年");
+  await expect(page.locator('.timeline-year-pie[data-year="1900"]')).toContainText("1900 年");
+  await expect(page.locator('.timeline-year-pie[data-year="1901"]')).toContainText("1901 年");
+  await expect(page.locator(".timeline-stacked-bars")).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+
+  await page.goto("/?mode=multi&year=1900&start=1899&end=1902#timeline-details");
+  await page.getByRole("button", { name: /展开分析/ }).click();
+  await expect(page.locator(".timeline-year-pies")).toHaveCount(0);
+  await expect(page.locator(".timeline-stacked-bars")).toBeVisible();
 });
 
 test("renders ISO flags in the battle popup instead of blank tiles", async ({ page }) => {

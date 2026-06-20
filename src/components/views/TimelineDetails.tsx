@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ListTree } from "lucide-react";
 import { getAdjacentBattleId } from "../../lib/battleInteraction";
-import { getTimelineChartSummary } from "../../lib/timelineAnalytics";
+import { getTimelineChartSummary, type TimelineStackBar } from "../../lib/timelineAnalytics";
 import type { AnalysisMode, Battle, YearRange } from "../../types/domain";
 
 type TimelineDetailsProps = {
@@ -20,6 +20,35 @@ type TimelineDetailsProps = {
 
 const eventListLimit = 24;
 const eventListPageSize = 24;
+const timelineSegmentColors = ["#5ed3c6", "#62aef0", "#f1b86b", "#ff8066", "#a991e8", "#8f9da5"];
+
+function getPieBackground(bar: TimelineStackBar, legend: string[]) {
+  if (bar.count === 0) {
+    return undefined;
+  }
+
+  let cumulativeCount = 0;
+  const stops = bar.segments
+    .filter((segment) => segment.count > 0)
+    .map((segment) => {
+      const start = (cumulativeCount / bar.count) * 100;
+      cumulativeCount += segment.count;
+      const end = (cumulativeCount / bar.count) * 100;
+      const color = timelineSegmentColors[legend.indexOf(segment.label) % timelineSegmentColors.length];
+      return `${color} ${start}% ${end}%`;
+    });
+
+  return `conic-gradient(${stops.join(", ")})`;
+}
+
+function getPieDescription(bar: TimelineStackBar) {
+  const segments = bar.segments
+    .filter((segment) => segment.count > 0)
+    .map((segment) => `${segment.label} ${segment.count} 条`)
+    .join("，");
+
+  return `${bar.label} 年：${bar.count} 条事件${segments ? `，${segments}` : ""}`;
+}
 
 export function TimelineDetails({
   baselineBattles,
@@ -104,48 +133,74 @@ export function TimelineDetails({
               <div>
                 <h3>{chartSummary.title}</h3>
                 <p>
-                  {chartSummary.mode === "year-type"
-                    ? "柱高表示年度事件量，颜色表示事件类型。"
-                    : chartSummary.mode === "month"
-                      ? "按事件日期汇总月份分布。"
-                      : "当前数据缺少可用月份，回退展示本年度类型分布。"}
+                  {chartSummary.mode === "year-type-pie"
+                    ? "饼图表示各年度事件类型构成，年份与事件总数标注在图旁。"
+                    : "柱高表示年度事件量，颜色表示事件类型。"}
                 </p>
               </div>
               <span>{currentYearBattles.length} 条当前结果</span>
             </header>
             {chartSummary.bars.length > 0 ? (
               <>
-                <div
-                  className={`timeline-stacked-bars ${chartSummary.mode}`}
-                  role="img"
-                  aria-label={`${activeLabel}${chartSummary.title}`}
-                >
-                  {chartSummary.bars.map((bar) => (
-                    <div
-                      key={bar.key}
-                      className={bar.current ? "timeline-stacked-bar current" : "timeline-stacked-bar"}
-                      data-total={bar.count}
-                      title={`${bar.label}: ${bar.count} 条事件`}
-                    >
-                      <strong>{bar.count}</strong>
-                      <span
-                        className="timeline-stack"
-                        style={{ height: `${Math.max(3, (bar.count / maxTimeCount) * 100)}%` }}
+                {chartSummary.mode === "year-type-pie" ? (
+                  <div
+                    className="timeline-year-pies"
+                    role="img"
+                    aria-label={`${activeLabel}${chartSummary.title}`}
+                  >
+                    {chartSummary.bars.map((bar) => (
+                      <div
+                        key={bar.key}
+                        className={bar.current ? "timeline-year-pie current" : "timeline-year-pie"}
+                        data-year={bar.label}
+                        data-total={bar.count}
+                        title={getPieDescription(bar)}
                       >
-                        {bar.segments.map((segment) => (
-                          <i
-                            key={segment.key}
-                            className={`timeline-stack-segment segment-${chartSummary.legend.indexOf(segment.label) % 6}`}
-                            data-count={segment.count}
-                            title={`${bar.label} · ${segment.label}: ${segment.count}`}
-                            style={{ flexGrow: segment.count }}
-                          />
-                        ))}
-                      </span>
-                      <small>{bar.label}</small>
-                    </div>
-                  ))}
-                </div>
+                        <span
+                          className={bar.count > 0 ? "timeline-pie-disc" : "timeline-pie-disc empty"}
+                          style={{ background: getPieBackground(bar, chartSummary.legend) }}
+                          aria-hidden="true"
+                        />
+                        <span className="timeline-pie-label">
+                          <strong>{bar.label} 年</strong>
+                          <small>{bar.count} 条事件</small>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className="timeline-stacked-bars year-type"
+                    role="img"
+                    aria-label={`${activeLabel}${chartSummary.title}`}
+                  >
+                    {chartSummary.bars.map((bar) => (
+                      <div
+                        key={bar.key}
+                        className={bar.current ? "timeline-stacked-bar current" : "timeline-stacked-bar"}
+                        data-total={bar.count}
+                        title={`${bar.label}: ${bar.count} 条事件`}
+                      >
+                        <strong>{bar.count}</strong>
+                        <span
+                          className="timeline-stack"
+                          style={{ height: `${Math.max(3, (bar.count / maxTimeCount) * 100)}%` }}
+                        >
+                          {bar.segments.map((segment) => (
+                            <i
+                              key={segment.key}
+                              className={`timeline-stack-segment segment-${chartSummary.legend.indexOf(segment.label) % 6}`}
+                              data-count={segment.count}
+                              title={`${bar.label} · ${segment.label}: ${segment.count}`}
+                              style={{ flexGrow: segment.count }}
+                            />
+                          ))}
+                        </span>
+                        <small>{bar.label}</small>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="timeline-stack-legend" aria-label="图表图例">
                   {chartSummary.legend.map((label, index) => (
                     <span key={label}>

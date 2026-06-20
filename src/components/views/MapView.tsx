@@ -521,10 +521,6 @@ function getBoundaryPopup(properties: CShapesBoundaryProperties) {
   `;
 }
 
-function getFeatureBounds(feature: GeoJSON.Feature<GeoJSON.Geometry>) {
-  return L.geoJSON(feature).getBounds();
-}
-
 export function MapView({
   battles,
   selectedBattleId,
@@ -591,35 +587,6 @@ export function MapView({
     );
 
     return getCountryLookup(snapshotFeatures.length > 0 ? snapshotFeatures : features);
-  }, [boundaryCollection, effectiveSnapshot]);
-  const countryBoundsLookup = useMemo(() => {
-    const lookup = new Map<string, L.LatLngBounds>();
-
-    if (!boundaryCollection) {
-      return lookup;
-    }
-
-    for (const feature of boundaryCollection.features) {
-      if (feature.properties.snapshot_date !== effectiveSnapshot) {
-        continue;
-      }
-
-      const bounds = getFeatureBounds(feature);
-      if (!bounds.isValid()) {
-        continue;
-      }
-
-      const key = normalizeCountryKey(feature.properties.statename);
-      const existing = lookup.get(key);
-
-      if (existing) {
-        existing.extend(bounds);
-      } else {
-        lookup.set(key, bounds);
-      }
-    }
-
-    return lookup;
   }, [boundaryCollection, effectiveSnapshot]);
   const eventTypeLegend = useMemo(() => {
     const counts = new Map<string, number>();
@@ -737,50 +704,6 @@ export function MapView({
     return battleIds;
   }, [battles, countryLookup, highlightedCountries, selectedCountryName]);
 
-  function fitBattleCountries(battle: Battle, options: L.FitBoundsOptions = {}) {
-    const map = mapRef.current;
-
-    if (!map) {
-      return false;
-    }
-
-    const highlight = getBattleCountrySides(battle, countryLookup);
-    const countryNames = getAllHighlightedCountries(highlight);
-    let bounds: L.LatLngBounds | null = null;
-
-    for (const countryName of countryNames) {
-      const countryBounds = countryBoundsLookup.get(normalizeCountryKey(countryName));
-
-      if (!countryBounds) {
-        continue;
-      }
-
-      bounds = bounds
-        ? bounds.extend(countryBounds)
-        : L.latLngBounds(countryBounds.getSouthWest(), countryBounds.getNorthEast());
-    }
-
-    if (!bounds?.isValid()) {
-      return false;
-    }
-
-    const paddedBounds = bounds.pad(0.12);
-    if (map.getBoundsZoom(paddedBounds, false, L.point(20, 20)) < eventMarkerZoomThreshold) {
-      return false;
-    }
-
-    map.fitBounds(paddedBounds, {
-      animate: true,
-      duration: 0.55,
-      paddingTopLeft: [20, 20],
-      paddingBottomRight: [20, 20],
-      maxZoom: 5,
-      ...options,
-    });
-
-    return true;
-  }
-
   function handleBattleSelect(battle: Battle) {
     setSelectedCountryName(null);
     focusBattleMarkerLayer(battle);
@@ -811,13 +734,9 @@ export function MapView({
       return;
     }
 
-    const fittedCountries = fitBattleCountries(battle, { duration: 0.45 });
     const targetZoom = Math.max(map.getZoom(), eventMarkerZoomThreshold);
-
-    if (!fittedCountries) {
-      setMapZoom(targetZoom);
-      map.setView([battle.latitude, battle.longitude], targetZoom, { animate: true });
-    }
+    setMapZoom(targetZoom);
+    map.setView([battle.latitude, battle.longitude], targetZoom, { animate: true });
 
     const marker = markerRefs.current.get(battle.id);
     if (marker && getMapLayerMode(targetZoom) === "events") {
@@ -1097,7 +1016,10 @@ export function MapView({
         [battle.latitude, battle.longitude],
         getBattleStyle(battle, selected, highlighted, battle.id === pulseBattleId),
       )
-        .bindPopup(getBattlePopupHtml(battle), { className: "battle-popup-leaflet" })
+        .bindPopup(getBattlePopupHtml(battle), {
+          autoPan: false,
+          className: "battle-popup-leaflet",
+        })
         .on("click", () => {
           if (battleClickTimerRef.current !== null) {
             window.clearTimeout(battleClickTimerRef.current);

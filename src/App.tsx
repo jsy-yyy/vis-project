@@ -243,6 +243,21 @@ export default function App() {
     [analysisMode, battles, selectedBattleLocked],
   );
 
+  const focusBattleWithoutScrolling = useCallback(
+    (battleId: string) => {
+      const scrollPosition = { left: window.scrollX, top: window.scrollY };
+      focusBattle(battleId, { scrollTo: "none" });
+
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ ...scrollPosition, behavior: "auto" });
+        window.requestAnimationFrame(() => {
+          window.scrollTo({ ...scrollPosition, behavior: "auto" });
+        });
+      });
+    },
+    [focusBattle],
+  );
+
   function updateYearRange(range: YearRange) {
     const nextBattles = filterBattles(battles, {
       selectedYearRange: range,
@@ -558,7 +573,7 @@ export default function App() {
             currentYear={currentYear}
             onSelectBattle={(battleId) => {
               if (battleId) {
-                focusBattle(battleId, { scrollTo: "map" });
+                focusBattleWithoutScrolling(battleId);
               } else {
                 updateSelectedBattle(null);
               }
