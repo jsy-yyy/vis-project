@@ -22,7 +22,11 @@ import {
   getClosestBattleYear,
   summarizeBattles,
 } from "./lib/battleAnalytics";
-import { buildCaseStudyAnalysis, caseStudyDefinitions } from "./lib/caseStudyAnalytics";
+import {
+  addCaseStudyComparisons,
+  buildCaseStudyAnalysis,
+  caseStudyDefinitions,
+} from "./lib/caseStudyAnalytics";
 import type { AnalysisMode, YearRange } from "./types/domain";
 
 export default function App() {
@@ -147,7 +151,10 @@ export default function App() {
     ],
   );
   const caseStudies = useMemo(
-    () => caseStudyDefinitions.map((definition) => buildCaseStudyAnalysis(battles, definition)),
+    () =>
+      addCaseStudyComparisons(
+        caseStudyDefinitions.map((definition) => buildCaseStudyAnalysis(battles, definition)),
+      ),
     [battles],
   );
 

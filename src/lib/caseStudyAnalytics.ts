@@ -13,9 +13,18 @@ export type CaseStudyAnalysis = CaseStudyDefinition & {
   totalEvents: number;
   peakYear: number;
   peakCount: number;
+  peakShare: number;
   topParticipants: Array<[string, number]>;
   topPairs: Array<{ source: string; target: string; count: number }>;
+  topPairShare: number;
   topTypes: Array<[string, number]>;
+  topTypeShare: number;
+  comparison?: {
+    label: string;
+    eventCountDifference: number;
+    eventCountPercentDifference: number | null;
+    peakCountDifference: number;
+  };
 };
 
 export const caseStudyDefinitions: CaseStudyDefinition[] = [
@@ -84,10 +93,42 @@ export function buildCaseStudyAnalysis(
     totalEvents: scopedBattles.length,
     peakYear: peak[0],
     peakCount: peak[1],
+    peakShare: scopedBattles.length > 0 ? peak[1] / scopedBattles.length : 0,
     topParticipants: rankCounts(participantCounts).slice(0, 5),
     topPairs: Array.from(pairCounts.values())
       .sort((left, right) => right.count - left.count || left.source.localeCompare(right.source))
       .slice(0, 5),
     topTypes: rankCounts(typeCounts).slice(0, 5),
+    topPairShare: scopedBattles.length > 0
+      ? (Array.from(pairCounts.values()).sort(
+          (left, right) => right.count - left.count || left.source.localeCompare(right.source),
+        )[0]?.count ?? 0) / scopedBattles.length
+      : 0,
+    topTypeShare: scopedBattles.length > 0
+      ? (rankCounts(typeCounts)[0]?.[1] ?? 0) / scopedBattles.length
+      : 0,
   };
+}
+
+export function addCaseStudyComparisons(analyses: CaseStudyAnalysis[]): CaseStudyAnalysis[] {
+  return analyses.map((analysis) => {
+    const comparison = analyses.find((candidate) => candidate.id !== analysis.id);
+
+    if (!comparison) {
+      return analysis;
+    }
+
+    return {
+      ...analysis,
+      comparison: {
+        label: comparison.label,
+        eventCountDifference: analysis.totalEvents - comparison.totalEvents,
+        eventCountPercentDifference:
+          comparison.totalEvents > 0
+            ? (analysis.totalEvents - comparison.totalEvents) / comparison.totalEvents
+            : null,
+        peakCountDifference: analysis.peakCount - comparison.peakCount,
+      },
+    };
+  });
 }

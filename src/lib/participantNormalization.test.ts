@@ -12,6 +12,42 @@ describe("participant normalization", () => {
     expect(canonicalParticipantId("russia", 1992)).toBe("russia");
   });
 
+  it("merges Rumania into Romania while preserving its historical map target", () => {
+    expect(canonicalParticipantId("rumania", 1944)).toBe("romania");
+
+    const canonicalBattle = canonicalizeBattleParticipants({
+      id: "romania-1944",
+      name: "Romania",
+      warId: "world-war-ii",
+      year: 1944,
+      latitude: 0,
+      longitude: 0,
+      participants: ["romania", "rumania"],
+      actors: [
+        {
+          id: "rumania",
+          rawName: "Romania",
+          name: "Rumania",
+          role: "winner",
+          type: "country",
+          confidence: "high",
+          mapTarget: "Rumania",
+          networkEligible: true,
+          sourceField: "Winner",
+          status: "mapped",
+        },
+      ],
+    });
+
+    expect(canonicalBattle.participants).toEqual(["romania"]);
+    expect(canonicalBattle.participantNames).toEqual(["Romania"]);
+    expect(canonicalBattle.actors?.[0]).toMatchObject({
+      id: "romania",
+      name: "Romania",
+      mapTarget: "Rumania",
+    });
+  });
+
   it("deduplicates canonical participants and preserves raw participant data", () => {
     const battle: Battle = {
       id: "test-1944",

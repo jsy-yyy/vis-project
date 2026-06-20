@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collapseRepeatedWarSuffix } from "./war-name-normalization.mjs";
+import { collapseRepeatedWarSuffix, normalizeKnownWarTypo } from "./war-name-normalization.mjs";
 
 describe("war name normalization", () => {
   it("collapses repeated War suffixes", () => {
@@ -11,4 +11,8 @@ describe("war name normalization", () => {
     expect(collapseRepeatedWarSuffix("World War II")).toBe("World War II");
     expect(collapseRepeatedWarSuffix("Iran-Iraq War")).toBe("Iran-Iraq War");
   });
+});
+
+it("normalizes the known Word War II typo", () => {
+  expect(normalizeKnownWarTypo("Word War II")).toBe("World War II");
 });

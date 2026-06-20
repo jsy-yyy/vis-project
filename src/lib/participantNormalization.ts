@@ -4,6 +4,10 @@ const sovietStartYear = 1922;
 const sovietEndYear = 1991;
 
 export function canonicalParticipantId(participantId: string, year: number): string {
+  if (participantId === "rumania") {
+    return "romania";
+  }
+
   if (participantId === "russia" && year >= sovietStartYear && year <= sovietEndYear) {
     return "ussr";
   }
@@ -14,6 +18,10 @@ export function canonicalParticipantId(participantId: string, year: number): str
 export function getCanonicalParticipantName(participantId: string): string {
   if (participantId === "ussr") {
     return "USSR";
+  }
+
+  if (participantId === "romania") {
+    return "Romania";
   }
 
   return participantId;
@@ -30,7 +38,7 @@ function canonicalizeActor(actor: Actor, year: number): Actor {
     ...actor,
     id,
     name: getCanonicalParticipantName(id),
-    mapTarget: getCanonicalParticipantName(id),
+    mapTarget: id === "romania" ? actor.mapTarget ?? "Rumania" : getCanonicalParticipantName(id),
   };
 }
 

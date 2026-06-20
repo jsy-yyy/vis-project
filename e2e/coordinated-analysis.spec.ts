@@ -130,11 +130,36 @@ test("applies the World War II case study with dynamic insight metrics", async (
   await applyCaseButton.click({ force: true });
 
   await expect(page.getByLabel("当前窗口参考年份")).toHaveText("参考 1944");
-  await expect(page.locator(".timeline-mode-summary")).toContainText("边界参考 1945");
+  await expect(page.locator(".timeline-mode-summary")).toContainText("历史边界快照 1945");
+  await expect(page.locator("#case-insights-content")).toBeVisible();
+  await expect(page.locator("#case-insights-content")).toContainText("World War II：洞察与验证路径");
+  await expect(page.locator("#case-insights-content")).toContainText("最强共现");
+  await expect(page.locator("#case-insights-content")).toContainText("时间峰值");
+  await expect(page.locator("#case-insights-content")).toContainText("对比 World War I");
   await expect(analysisModeButton(page, "多年度分析")).toHaveAttribute("aria-pressed", "true");
   await expect(page).toHaveURL(/mode=multi/);
   await expect(page).toHaveURL(/start=1939/);
   await expect(page).toHaveURL(/end=1945/);
+});
+
+test("uses the same resolved CShapes snapshot in timeline and map labels", async ({ page }) => {
+  await page.goto("/?mode=multi&year=1944&start=1944&end=1944#timeline-overview");
+
+  await expect(page.locator(".timeline-mode-summary")).toContainText("历史边界快照 1940");
+  await expect(page.locator(".map-year-feedback")).toContainText("CShapes 快照 1940");
+});
+
+test("keeps the mobile reference year clear of the timeline heading", async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width > 720, "mobile-only layout assertion");
+
+  await page.goto("/?mode=multi&year=1900&start=1899&end=1901#timeline-overview");
+  const headingBox = await page.locator(".timeline-overview-heading .section-heading").boundingBox();
+  const outputBox = await page.locator(".timeline-current-output").boundingBox();
+
+  expect(headingBox).not.toBeNull();
+  expect(outputBox).not.toBeNull();
+  expect(outputBox!.y).toBeGreaterThanOrEqual(headingBox!.y + headingBox!.height - 1);
 });
 
 test("labels network-only war filtering as a local relationship scope", async ({ page }) => {

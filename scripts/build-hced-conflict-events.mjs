@@ -2,7 +2,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { collapseRepeatedWarSuffix } from "./war-name-normalization.mjs";
+import {
+  collapseRepeatedWarSuffix,
+  normalizeKnownWarTypo,
+} from "./war-name-normalization.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, "..");
@@ -149,6 +152,7 @@ const warNameMappings = new Map([
   ["world war i eastern front", "World War I"],
   ["world war i war at sea", "World War I"],
   ["world war two", "World War II"],
+  ["word war ii", "World War II"],
   ["second world war", "World War II"],
   ["world war ii war at sea", "World War II"],
   ["world war ii world war ii", "World War II"],
@@ -216,7 +220,7 @@ function normalizeWarName(value, year) {
     const canonicalName =
       warNameMappings.get(lookupKey) ??
       (lookupKey === "world war" ? inferWorldWarFromYear(year) : null) ??
-      name.replace(/\s+/g, " ").trim();
+      normalizeKnownWarTypo(name.replace(/\s+/g, " ").trim());
     const correctedName = collapseRepeatedWarSuffix(correctWorldWarByYear(canonicalName, year));
 
     const canonicalKey = normalizeWarLookupKey(correctedName);
@@ -434,10 +438,14 @@ function createActor({
     throw new Error(`Invalid actor confidence for "${rawName}": ${confidence}`);
   }
 
+  const canonicalIdentity = normalizeActorKey(name) === "rumania"
+    ? { id: "romania", name: "Romania" }
+    : { id: slugify(name), name };
+
   return {
-    id: slugify(name),
+    id: canonicalIdentity.id,
     rawName,
-    name,
+    name: canonicalIdentity.name,
     role,
     type,
     confidence,

@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
-import { BarChart3, Pause, Play, RotateCcw, SkipBack, SkipForward, X } from "lucide-react";
+import {
+  BarChart3,
+  ChevronDown,
+  Lightbulb,
+  MapPinned,
+  Network,
+  Pause,
+  Play,
+  RotateCcw,
+  SearchCheck,
+  SkipBack,
+  SkipForward,
+  X,
+} from "lucide-react";
 import { getAdjacentPlayableYear, getPlayableYears } from "../../lib/battleInteraction";
 import type { CaseStudyAnalysis } from "../../lib/caseStudyAnalytics";
+import { resolveCShapesSnapshot } from "../../lib/cshapesSnapshots";
 import { getYearlyEventCounts } from "../../lib/timelineAnalytics";
 import {
   getClosestYearRangeBoundary,
@@ -77,6 +91,7 @@ export function TimelineOverview({
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackDelay, setPlaybackDelay] = useState(1400);
   const [selectedCaseStudyId, setSelectedCaseStudyId] = useState(caseStudies[0]?.id ?? "");
+  const [caseInsightsExpanded, setCaseInsightsExpanded] = useState(false);
   const allYearCounts = useMemo(
     () => getYearlyEventCounts(baselineBattles, allYearRange),
     [allYearRange, baselineBattles],
@@ -99,6 +114,21 @@ export function TimelineOverview({
     : null;
   const selectedCaseStudy =
     caseStudies.find((analysis) => analysis.id === selectedCaseStudyId) ?? caseStudies[0] ?? null;
+  const snapshotReferenceYear = analysisMode === "range" ? selectedYearRange[1] : currentYear;
+  const resolvedSnapshot = resolveCShapesSnapshot(snapshotReferenceYear);
+
+  function formatPercentage(value: number) {
+    return `${(value * 100).toFixed(1)}%`;
+  }
+
+  function formatParticipantName(id: string) {
+    return participants.find((participant) => participant.id === id)?.name
+      ?? id.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+  }
+
+  function formatSignedValue(value: number, suffix = "") {
+    return `${value > 0 ? "+" : ""}${value}${suffix}`;
+  }
 
   useEffect(() => {
     setIsPlaying(false);
@@ -495,8 +525,8 @@ export function TimelineOverview({
       <div className="timeline-overview-controls">
         <div className="timeline-mode-summary" aria-live="polite">
           {analysisMode === "range"
-            ? `分析范围 ${selectedYearRange[0]}–${selectedYearRange[1]}，边界参考 ${selectedYearRange[1]}，窗口参考 ${currentYear}`
-            : `地图显示 ${currentYear} 年事件`}
+            ? `分析范围 ${selectedYearRange[0]}–${selectedYearRange[1]}，窗口参考 ${currentYear}，历史边界快照 ${resolvedSnapshot.label}`
+            : `地图显示 ${currentYear} 年事件，历史边界快照 ${resolvedSnapshot.label}`}
         </div>
         <div className="timeline-playback-controls">
           <button
@@ -550,29 +580,123 @@ export function TimelineOverview({
         </div>
       </div>
       {selectedCaseStudy ? (
-        <div className="timeline-case-presets" aria-label="案例分析预设">
-          <label>
-            <span>案例预设</span>
-            <select
-              value={selectedCaseStudy.id}
-              onChange={(event) => setSelectedCaseStudyId(event.target.value)}
+        <div
+          className={caseInsightsExpanded ? "timeline-case-presets expanded" : "timeline-case-presets"}
+          aria-label="案例分析预设"
+        >
+          <div className="timeline-case-preset-controls">
+            <label>
+              <span>案例预设</span>
+              <select
+                value={selectedCaseStudy.id}
+                onChange={(event) => setSelectedCaseStudyId(event.target.value)}
+              >
+                {caseStudies.map((analysis) => (
+                  <option key={analysis.id} value={analysis.id}>
+                    {analysis.label} · {analysis.range[0]}–{analysis.range[1]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span>
+              峰值 {selectedCaseStudy.peakYear} · {selectedCaseStudy.peakCount} 条事件
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setCaseInsightsExpanded(true);
+                onApplyCaseStudy(selectedCaseStudy);
+              }}
             >
-              {caseStudies.map((analysis) => (
-                <option key={analysis.id} value={analysis.id}>
-                  {analysis.label} · {analysis.range[0]}–{analysis.range[1]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <span>
-            峰值 {selectedCaseStudy.peakYear} · {selectedCaseStudy.peakCount} 条事件
-          </span>
-          <button type="button" onClick={() => onApplyCaseStudy(selectedCaseStudy)}>
-            应用窗口
-          </button>
-          <button type="button" onClick={() => onFocusCaseStudyParticipant(selectedCaseStudy)}>
-            聚焦核心参战方
-          </button>
+              应用窗口
+            </button>
+            <button type="button" onClick={() => onFocusCaseStudyParticipant(selectedCaseStudy)}>
+              聚焦核心参战方
+            </button>
+            <button
+              className="case-insights-toggle"
+              type="button"
+              aria-expanded={caseInsightsExpanded}
+              aria-controls="case-insights-content"
+              onClick={() => setCaseInsightsExpanded((expanded) => !expanded)}
+            >
+              <Lightbulb size={15} />
+              {caseInsightsExpanded ? "收起洞察" : "查看洞察"}
+              <ChevronDown size={15} />
+            </button>
+          </div>
+          {caseInsightsExpanded ? (
+            <div id="case-insights-content" className="case-insights-content">
+              <div className="case-insights-heading">
+                <div>
+                  <strong>{selectedCaseStudy.label}：洞察与验证路径</strong>
+                  <p>指标由当前 HCED 数据动态计算；空间描述作为待地图核验的分析假设。</p>
+                </div>
+                {selectedCaseStudy.comparison ? (
+                  <span>
+                    对比 {selectedCaseStudy.comparison.label}：
+                    事件 {formatSignedValue(selectedCaseStudy.comparison.eventCountDifference)}
+                    {selectedCaseStudy.comparison.eventCountPercentDifference === null
+                      ? ""
+                      : `（${formatSignedValue(
+                          Number((selectedCaseStudy.comparison.eventCountPercentDifference * 100).toFixed(1)),
+                          "%",
+                        )}）`}
+                    ，峰值 {formatSignedValue(selectedCaseStudy.comparison.peakCountDifference)}
+                  </span>
+                ) : null}
+              </div>
+              <div className="case-insight-metrics">
+                <div>
+                  <small>事件总量</small>
+                  <strong>{selectedCaseStudy.totalEvents}</strong>
+                  <span>{selectedCaseStudy.range[0]}–{selectedCaseStudy.range[1]}</span>
+                </div>
+                <div>
+                  <small>时间峰值</small>
+                  <strong>{selectedCaseStudy.peakYear}</strong>
+                  <span>{selectedCaseStudy.peakCount} 条 · {formatPercentage(selectedCaseStudy.peakShare)}</span>
+                </div>
+                <div>
+                  <small>最强共现</small>
+                  <strong>
+                    {selectedCaseStudy.topPairs[0]
+                      ? `${formatParticipantName(selectedCaseStudy.topPairs[0].source)}–${formatParticipantName(
+                          selectedCaseStudy.topPairs[0].target,
+                        )}`
+                      : "暂无"}
+                  </strong>
+                  <span>
+                    {selectedCaseStudy.topPairs[0]?.count ?? 0} 条 · {formatPercentage(selectedCaseStudy.topPairShare)}
+                  </span>
+                </div>
+                <div>
+                  <small>主要事件类型</small>
+                  <strong>{selectedCaseStudy.topTypes[0]?.[0] ?? "暂无"}</strong>
+                  <span>
+                    {selectedCaseStudy.topTypes[0]?.[1] ?? 0} 条 · {formatPercentage(selectedCaseStudy.topTypeShare)}
+                  </span>
+                </div>
+              </div>
+              <p className="case-analysis-prompt">
+                <Lightbulb size={15} />
+                分析提示：{selectedCaseStudy.narrative}
+              </p>
+              <ol className="case-verification-path">
+                <li><BarChart3 size={15} /><span><strong>时间</strong>确认峰值及峰值前后的变化过程。</span></li>
+                <li><MapPinned size={15} /><span><strong>地图</strong>核验事件热点是否形成多个空间簇。</span></li>
+                <li><Network size={15} /><span><strong>关系</strong>验证核心共现边及其相对强度。</span></li>
+                <li><SearchCheck size={15} /><span><strong>详情</strong>回溯具体事件，检查聚合模式的数据依据。</span></li>
+              </ol>
+              {selectedCaseStudy.topPairs[1] ? (
+                <p className="case-secondary-finding">
+                  次强共现：{formatParticipantName(selectedCaseStudy.topPairs[1].source)}–
+                  {formatParticipantName(selectedCaseStudy.topPairs[1].target)}
+                  （{selectedCaseStudy.topPairs[1].count} 条）
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
       {yearAdjustmentMessage ? <p className="timeline-adjustment-note">{yearAdjustmentMessage}</p> : null}
