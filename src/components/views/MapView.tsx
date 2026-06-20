@@ -915,7 +915,9 @@ export function MapView({
         }
       })
       .catch((error: unknown) => {
-        console.error(error);
+        if (active) {
+          console.error(error);
+        }
       });
 
     fetch("/data/cshapes/cshapes_1886_2003_snapshots.geojson")
@@ -932,7 +934,9 @@ export function MapView({
         }
       })
       .catch((error: unknown) => {
-        console.error(error);
+        if (active) {
+          console.error(error);
+        }
       });
 
     return () => {

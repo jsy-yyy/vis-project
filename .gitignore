@@ -14,3 +14,4 @@ doc/*
 *.tsbuildinfo
 
 .DS_Store
+problems-v2.md

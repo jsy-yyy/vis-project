@@ -133,6 +133,10 @@ h1 {
   top: 0.65rem;
   z-index: 900;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem 0.55rem;
   width: fit-content;
   max-width: 100%;
   margin: 0 auto 1rem;
@@ -142,6 +146,45 @@ h1 {
   background: rgba(11, 15, 18, 0.92);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(12px);
+}
+
+.view-navigation-links,
+.view-navigation-status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.view-navigation-status {
+  padding-left: 0.4rem;
+  border-left: 1px solid rgba(230, 236, 233, 0.12);
+}
+
+.view-navigation-status span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid rgba(230, 236, 233, 0.1);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.view-navigation-status strong {
+  max-width: 12rem;
+  overflow: hidden;
+  color: var(--text-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-navigation-status span.warning {
+  border-color: rgba(239, 82, 95, 0.42);
+  color: #ffb0b7;
 }
 
 .view-navigation a {
@@ -1536,6 +1579,13 @@ h1 {
   background: transparent;
 }
 
+.network-legend .event {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 2px dashed var(--cyan);
+  border-radius: 50%;
+}
+
 .network-legend .edge {
   width: 1.1rem;
   height: 0;
@@ -1564,6 +1614,37 @@ h1 {
   grid-template-columns: minmax(26rem, 1.35fr) minmax(20rem, 0.95fr);
   gap: 0.75rem;
   align-items: stretch;
+}
+
+.network-scope-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.network-scope-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.85rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid rgba(230, 236, 233, 0.11);
+  border-radius: 999px;
+  background: rgba(11, 15, 18, 0.46);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.network-scope-strip strong {
+  color: var(--text-soft);
+}
+
+.network-scope-strip .local-scope,
+.network-scope-strip .network-event-status {
+  border-color: rgba(94, 211, 198, 0.28);
+  color: var(--green);
 }
 
 .network-view-switcher {
@@ -1792,7 +1873,8 @@ g:focus-visible .participant-heatmap-rect {
 
 .network-edge.event-highlighted {
   opacity: 1;
-  stroke: var(--gold);
+  stroke: var(--cyan);
+  stroke-dasharray: 5 4;
 }
 
 .network-svg-node {
@@ -1863,8 +1945,9 @@ g:focus-visible .participant-heatmap-rect {
 
 .network-svg-node.event-highlighted circle {
   fill-opacity: 1;
-  stroke: var(--gold);
-  stroke-width: 4;
+  stroke: var(--cyan);
+  stroke-dasharray: 4 3;
+  stroke-width: 5;
 }
 
 .network-node-flag {
@@ -2833,6 +2916,12 @@ g:focus-visible .participant-heatmap-rect {
   color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 800;
+}
+
+.network-war-filter em {
+  margin-left: 0.35rem;
+  color: var(--green);
+  font-style: normal;
 }
 
 .network-war-filter select {

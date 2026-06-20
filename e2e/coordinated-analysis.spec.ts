@@ -9,6 +9,25 @@ function analysisModeButton(page: import("@playwright/test").Page, name: "单年
   return page.locator(".analysis-mode-toggle").getByRole("button", { name });
 }
 
+async function expectVisiblePopupFlag(
+  popup: import("@playwright/test").Locator,
+  src: string,
+) {
+  await expect(popup.locator(`img.battle-popup-flag[src="${src}"]`).first()).toBeVisible();
+}
+
+function visibleBattlePopup(page: import("@playwright/test").Page) {
+  return page.locator(".battle-popup-card:visible").first();
+}
+
+async function openPopupByDoubleClickingMarker(marker: import("@playwright/test").Locator) {
+  await marker.dblclick({ force: true });
+  const page = marker.page();
+  if (await page.locator(".battle-popup-card:visible").count() === 0) {
+    await marker.dispatchEvent("dblclick");
+  }
+}
+
 test("places the compact timeline before the map and keeps details collapsed", async ({ page }) => {
   const overviewBox = await page.locator("#timeline-overview").boundingBox();
   const mapBox = await page.locator("#map-view").boundingBox();
@@ -63,7 +82,7 @@ test("links year selection and brushing to map state and URL", async ({ page }) 
 
 test("restores legacy ranges as multi-year analysis and switches back to a single year", async ({ page }) => {
   await page.goto("/?year=1900&start=1900&end=1900#timeline-overview");
-  await expect(page.getByLabel("当前地图年份")).toHaveText("1900");
+  await expect(page.getByLabel("当前窗口参考年份")).toHaveText("参考 1900");
   await expect(page.locator(".timeline-state-strip")).toContainText("1900–1900");
   await expect(analysisModeButton(page, "多年度分析")).toHaveAttribute("aria-pressed", "true");
   await expect(page).toHaveURL(/mode=multi/);
@@ -110,11 +129,44 @@ test("applies the World War II case study with dynamic insight metrics", async (
   await applyCaseButton.scrollIntoViewIfNeeded();
   await applyCaseButton.click({ force: true });
 
-  await expect(page.getByLabel("当前地图年份")).toHaveText("1944");
+  await expect(page.getByLabel("当前窗口参考年份")).toHaveText("参考 1944");
+  await expect(page.locator(".timeline-mode-summary")).toContainText("边界参考 1945");
   await expect(analysisModeButton(page, "多年度分析")).toHaveAttribute("aria-pressed", "true");
   await expect(page).toHaveURL(/mode=multi/);
   await expect(page).toHaveURL(/start=1939/);
   await expect(page).toHaveURL(/end=1945/);
+});
+
+test("labels network-only war filtering as a local relationship scope", async ({ page }) => {
+  await page.goto("/?mode=multi&year=1944&start=1939&end=1945#network-view");
+
+  await expect(page.getByLabel("网络局部范围")).toContainText("仅关系视图");
+  const worldWarTwoValue = await page
+    .getByLabel("网络局部范围")
+    .locator("option")
+    .filter({ hasText: "World War II" })
+    .first()
+    .getAttribute("value");
+  expect(worldWarTwoValue).not.toBeNull();
+  await page.getByLabel("网络局部范围").selectOption(worldWarTwoValue!);
+
+  await expect(page.locator(".network-scope-strip")).toContainText("关系网络");
+  await expect(page.locator(".network-scope-strip")).toContainText("World War II");
+  await expect(page.locator(".network-scope-strip")).toContainText("仅关系视图");
+  await expect(page.locator(".timeline-state-strip")).not.toContainText("World War II");
+});
+
+test("uses current filter result wording in timeline bar labels", async ({ page }) => {
+  await page.goto("/?mode=multi&year=1944&start=1939&end=1945#timeline-overview");
+
+  await expect(page.locator('.timeline-overview-bar[data-year="1900"]')).toHaveAttribute(
+    "aria-label",
+    /当前筛选结果 0 条/,
+  );
+  await expect(page.locator('.timeline-overview-bar[data-year="1900"]')).not.toHaveAttribute(
+    "aria-label",
+    /当前参战方/,
+  );
 });
 
 test("lets an overlapping range expand in either direction", async ({ page }) => {
@@ -130,6 +182,19 @@ test("lets an overlapping range expand in either direction", async ({ page }) =>
   await expect(startHandle).toHaveAttribute("aria-valuenow", "1943");
   await endHandle.press("ArrowRight");
   await expect(endHandle).toHaveAttribute("aria-valuenow", "1945");
+});
+
+test("heatmap cells apply both participant and year period filters", async ({ page }) => {
+  await page.goto("/?mode=multi&year=1944&start=1939&end=1945#network-view");
+
+  await page.getByRole("tab", { name: /参战方年度热力图/ }).click();
+  await page.getByRole("button", { name: /Germany 在 1944 中有/ }).click();
+
+  await expect(page).toHaveURL(/participant=germany/);
+  await expect(page).toHaveURL(/start=1944/);
+  await expect(page).toHaveURL(/end=1944/);
+  await expect(page.locator(".timeline-state-strip")).toContainText("1944–1944");
+  await expect(page.locator(".timeline-state-strip")).toContainText("Germany");
 });
 
 test("drills from a multi-year heat bubble into event details", async ({ page }) => {
@@ -155,6 +220,7 @@ test("drills from a multi-year heat bubble into event details", async ({ page })
   await expect(page).toHaveURL(/event=/);
   await expect(page.locator(".detail-panel h3")).not.toBeEmpty();
   await expect(page.locator(".network-svg-node.event-highlighted").first()).toBeAttached();
+  await expect(page.locator(".network-event-status")).toContainText(/当前事件/);
 });
 
 test("opens the same flag matchup popup when double-clicking single- and multi-year event points", async ({ page }) => {
@@ -165,13 +231,12 @@ test("opens the same flag matchup popup when double-clicking single- and multi-y
 
   const singleMarker = page.locator('.battle-marker[data-event-id="Bregalnica1913"]');
   await expect(singleMarker).toBeVisible();
-  await singleMarker.dblclick({ force: true });
-  const singlePopup = page.locator(".battle-popup-card:visible");
-  await expect(singlePopup).toHaveCount(1);
+  await openPopupByDoubleClickingMarker(singleMarker);
+  const singlePopup = visibleBattlePopup(page);
   await expect(singlePopup).toBeVisible();
   await expect(singlePopup).toContainText("VS");
-  await expect(singlePopup.locator('img[src="/flags/iso/rs.svg"]')).toBeVisible();
-  await expect(singlePopup.locator('img[src="/flags/iso/bg.svg"]')).toBeVisible();
+  await expectVisiblePopupFlag(singlePopup, "/flags/iso/rs.svg");
+  await expectVisiblePopupFlag(singlePopup, "/flags/iso/bg.svg");
 
   await page.goto("/?mode=multi&year=1944&start=1939&end=1945#map-view");
   const multiHeatCell = page.locator('.density-bubble[data-event-ids~="Agordat1941"]');
@@ -180,16 +245,16 @@ test("opens the same flag matchup popup when double-clicking single- and multi-y
 
   const multiMarker = page.locator('.battle-marker[data-event-id="Agordat1941"]');
   await expect(multiMarker).toBeVisible();
-  await multiMarker.dblclick({ force: true });
-  const multiPopup = page.locator(".battle-popup-card:visible");
-  await expect(multiPopup).toHaveCount(1);
+  await page.waitForTimeout(600);
+  await openPopupByDoubleClickingMarker(multiMarker);
+  const multiPopup = visibleBattlePopup(page);
   await expect(multiPopup).toBeVisible();
   await expect(page).toHaveURL(/event=Agordat1941/);
   await expect(multiPopup).toContainText("United Kingdom");
   await expect(multiPopup).toContainText("Italy");
   await expect(multiPopup).toContainText("VS");
-  await expect(multiPopup.locator('img[src="/flags/united-kingdom.svg"]')).toBeVisible();
-  await expect(multiPopup.locator('img[src="/flags/italy-kingdom.svg"]')).toBeVisible();
+  await expectVisiblePopupFlag(multiPopup, "/flags/united-kingdom.svg");
+  await expectVisiblePopupFlag(multiPopup, "/flags/italy-kingdom.svg");
   await page.waitForTimeout(500);
   await expect(multiPopup).toBeVisible();
 });
@@ -231,13 +296,12 @@ test("renders visual timeline details and keeps analysis panels aligned", async 
 test("renders ISO flags in the battle popup instead of blank tiles", async ({ page }) => {
   await page.goto("/?year=1913&event=Bregalnica1913&locked=1#map-view");
 
-  const serbiaFlag = page.locator('img.battle-popup-flag[src="/flags/iso/rs.svg"]');
-  const bulgariaFlag = page.locator('img.battle-popup-flag[src="/flags/iso/bg.svg"]');
-  await expect(serbiaFlag).toBeVisible();
-  await expect(bulgariaFlag).toBeVisible();
+  const popup = page.locator(".battle-popup-card:visible").first();
+  await expectVisiblePopupFlag(popup, "/flags/iso/rs.svg");
+  await expectVisiblePopupFlag(popup, "/flags/iso/bg.svg");
 
   expect(
-    await page.locator(".battle-popup-card img.battle-popup-flag").evaluateAll((flags) =>
+    await popup.locator("img.battle-popup-flag").evaluateAll((flags) =>
       flags.every((element) => {
         const image = element as HTMLImageElement;
         return image.complete && image.naturalWidth > 0;

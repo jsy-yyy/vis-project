@@ -288,7 +288,12 @@ export function TimelineOverview({
             </p>
           </div>
         </div>
-        <output className="timeline-current-output" aria-label="当前地图年份">{currentYear}</output>
+        <output
+          className="timeline-current-output"
+          aria-label={analysisMode === "range" ? "当前窗口参考年份" : "当前地图年份"}
+        >
+          {analysisMode === "range" ? `参考 ${currentYear}` : currentYear}
+        </output>
       </div>
 
       <div className="timeline-state-strip" aria-label="当前联动状态">
@@ -358,7 +363,7 @@ export function TimelineOverview({
               ].join(" ")}
               type="button"
               data-year={year}
-              aria-label={`${year} 年：全部 ${count} 条，当前参战方 ${filteredCount} 条`}
+              aria-label={`${year} 年：全部 ${count} 条，当前筛选结果 ${filteredCount} 条`}
               aria-pressed={selected}
               onClick={(event) => {
                 event.stopPropagation();
@@ -490,7 +495,7 @@ export function TimelineOverview({
       <div className="timeline-overview-controls">
         <div className="timeline-mode-summary" aria-live="polite">
           {analysisMode === "range"
-            ? `地图显示 ${selectedYearRange[0]}–${selectedYearRange[1]} 年范围内事件`
+            ? `分析范围 ${selectedYearRange[0]}–${selectedYearRange[1]}，边界参考 ${selectedYearRange[1]}，窗口参考 ${currentYear}`
             : `地图显示 ${currentYear} 年事件`}
         </div>
         <div className="timeline-playback-controls">

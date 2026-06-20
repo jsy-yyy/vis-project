@@ -10,9 +10,16 @@ const viewLinks = [
 
 type ViewNavigationProps = {
   onCopyLink: () => void;
+  statusItems: ViewStatusItem[];
 };
 
-export function ViewNavigation({ onCopyLink }: ViewNavigationProps) {
+export type ViewStatusItem = {
+  label: string;
+  value: string;
+  tone?: "default" | "warning";
+};
+
+export function ViewNavigation({ onCopyLink, statusItems }: ViewNavigationProps) {
   const [activeView, setActiveView] = useState(window.location.hash || "#timeline-overview");
 
   useEffect(() => {
@@ -49,25 +56,34 @@ export function ViewNavigation({ onCopyLink }: ViewNavigationProps) {
 
   return (
     <nav className="view-navigation" aria-label="视图快速导航">
-      {viewLinks.map(({ href, label, icon: Icon }) => (
-        <a
-          key={href}
-          href={href}
-          className={activeView === href ? "active" : ""}
-          aria-current={activeView === href ? "location" : undefined}
-          onClick={(event) => {
-            event.preventDefault();
-            handleNavigation(href);
-          }}
-        >
-          <Icon size={16} />
-          <span>{label}</span>
-        </a>
-      ))}
-      <button type="button" className="view-copy-button" onClick={onCopyLink} title="复制当前分析链接">
-        <Copy size={16} />
-        <span className="sr-only">复制当前分析链接</span>
-      </button>
+      <div className="view-navigation-links">
+        {viewLinks.map(({ href, label, icon: Icon }) => (
+          <a
+            key={href}
+            href={href}
+            className={activeView === href ? "active" : ""}
+            aria-current={activeView === href ? "location" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              handleNavigation(href);
+            }}
+          >
+            <Icon size={16} />
+            <span>{label}</span>
+          </a>
+        ))}
+        <button type="button" className="view-copy-button" onClick={onCopyLink} title="复制当前分析链接">
+          <Copy size={16} />
+          <span className="sr-only">复制当前分析链接</span>
+        </button>
+      </div>
+      <div className="view-navigation-status" aria-label="持续可见的全局联动状态">
+        {statusItems.map((item) => (
+          <span key={item.label} className={item.tone === "warning" ? "warning" : undefined}>
+            {item.label} <strong>{item.value}</strong>
+          </span>
+        ))}
+      </div>
     </nav>
   );
 }

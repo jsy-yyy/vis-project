@@ -113,6 +113,39 @@ export default function App() {
     [resultBattles, mapBattles, selectedBattleId],
   );
   const highlightedParticipantIds = selectedBattle?.participants ?? [];
+  const selectedParticipantName = selectedParticipant
+    ? participants.find((participant) => participant.id === selectedParticipant)?.name ?? selectedParticipant
+    : null;
+  const globalStatusItems = useMemo(
+    () => [
+      {
+        label: analysisMode === "range" ? "年份窗口" : "地图年份",
+        value: analysisMode === "range" ? `${selectedYearRange[0]}–${selectedYearRange[1]}` : String(currentYear),
+      },
+      {
+        label: "参战方",
+        value: selectedParticipantName ?? "全部",
+      },
+      ...(selectedBattle
+        ? [
+            {
+              label: selectedBattleLocked ? "锁定事件" : "选中事件",
+              value: selectedBattle.name,
+              tone: selectedBattleScopeStatus.inFilteredScope ? "default" as const : "warning" as const,
+            },
+          ]
+        : []),
+    ],
+    [
+      analysisMode,
+      currentYear,
+      selectedBattle,
+      selectedBattleLocked,
+      selectedBattleScopeStatus.inFilteredScope,
+      selectedParticipantName,
+      selectedYearRange,
+    ],
+  );
   const caseStudies = useMemo(
     () => caseStudyDefinitions.map((definition) => buildCaseStudyAnalysis(battles, definition)),
     [battles],
@@ -373,6 +406,28 @@ export default function App() {
     );
   }
 
+  function updateParticipantPeriodFilter(participantId: string, range: YearRange) {
+    const nextBattles = filterBattles(battles, {
+      selectedYearRange: range,
+      selectedParticipant: participantId,
+    });
+    const participantName = participants.find((participant) => participant.id === participantId)?.name ?? participantId;
+    const nextYear = getClosestBattleYear(nextBattles, range[1]);
+
+    setAnalysisMode("range");
+    setSelectedYearRange(range);
+    setSelectedParticipant(participantId);
+    setCurrentYear(nextYear);
+    setYearAdjustmentMessage(null);
+    syncSelectedBattleAfterScopeChange(
+      nextBattles,
+      "参战方年度热力图筛选后，原选中事件已不在当前结果中，详情已清空。",
+    );
+    setLiveStatusMessage(
+      `已筛选 ${participantName} 在 ${range[0] === range[1] ? range[0] : `${range[0]}-${range[1]}`} 年的事件，共 ${nextBattles.length} 条。`,
+    );
+  }
+
   function copyAnalysisLink() {
     const link = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
     const fallbackCopy = () => {
@@ -420,6 +475,7 @@ export default function App() {
   return (
     <AppShell
       onCopyLink={copyAnalysisLink}
+      statusItems={globalStatusItems}
       header={
         <AppHeader
           totalBattles={battles.length}
@@ -508,7 +564,11 @@ export default function App() {
             participants={participants}
             selectedParticipant={selectedParticipant}
             highlightedParticipantIds={highlightedParticipantIds}
+            selectedBattle={selectedBattle}
+            activeYearRange={effectiveYearRange}
+            analysisMode={analysisMode}
             onSelectParticipant={updateParticipantFilter}
+            onSelectParticipantPeriod={updateParticipantPeriodFilter}
             onSelectBattle={(battleId) => focusBattle(battleId, { scrollTo: "map" })}
             onResetFilters={resetFilters}
           />

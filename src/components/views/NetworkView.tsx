@@ -18,6 +18,7 @@ import type {
   ParticipantRelativeRelation,
 } from "../../lib/networkAnalytics";
 import type { Battle, Participant, War } from "../../types/domain";
+import type { AnalysisMode, YearRange } from "../../types/domain";
 
 type NetworkViewProps = {
   battles: Battle[];
@@ -25,7 +26,11 @@ type NetworkViewProps = {
   participants: Participant[];
   selectedParticipant: string | null;
   highlightedParticipantIds: string[];
+  selectedBattle: Battle | null;
+  activeYearRange: YearRange;
+  analysisMode: AnalysisMode;
   onSelectParticipant: (participantId: string | null) => void;
+  onSelectParticipantPeriod: (participantId: string, range: YearRange) => void;
   onSelectBattle: (battleId: string) => void;
   onResetFilters: () => void;
 };
@@ -80,7 +85,7 @@ type EdgeDetail = {
 
 type ParticipantHeatmap = {
   rows: ParticipantNetworkNode[];
-  columns: Array<{ id: string; name: string; count: number }>;
+  columns: Array<{ id: string; name: string; count: number; start: number; end: number }>;
   cells: Map<string, number>;
   maxCount: number;
 };
@@ -260,7 +265,7 @@ function buildParticipantHeatmap(
 
   return {
     rows,
-    columns: columns.map(({ id, name, count }) => ({ id, name, count })),
+    columns: columns.map(({ id, name, count, start, end }) => ({ id, name, count, start, end })),
     cells,
     maxCount,
   };
@@ -396,7 +401,11 @@ export function NetworkView({
   participants,
   selectedParticipant,
   highlightedParticipantIds,
+  selectedBattle,
+  activeYearRange,
+  analysisMode,
   onSelectParticipant,
+  onSelectParticipantPeriod,
   onSelectBattle,
   onResetFilters,
 }: NetworkViewProps) {
@@ -475,6 +484,14 @@ export function NetworkView({
   );
   const highlightedParticipantKey = highlightedParticipantIds.slice().sort().join("|");
   const selectedParticipantName = selectedParticipant ? getParticipantName(selectedParticipant, participantNames) : null;
+  const activeYearRangeLabel =
+    analysisMode === "range" ? `${activeYearRange[0]}–${activeYearRange[1]}` : String(activeYearRange[0]);
+  const selectedBattleParticipantLabel = selectedBattle
+    ? selectedBattle.participants
+        .slice(0, 3)
+        .map((participantId) => getParticipantName(participantId, participantNames))
+        .join(" vs ")
+    : "";
   const visibleParticipantOptions = useMemo(() => {
     const query = participantSearch.trim().toLowerCase();
     return participants
@@ -683,7 +700,22 @@ export function NetworkView({
           <span><i className="edge opponent" />敌对事件</span>
           <span><i className="edge cooccurrence" />普通共现</span>
           <span><i className="selected" />当前选中参战方</span>
+          <span><i className="event" />当前事件涉及方</span>
         </div>
+      </div>
+      <div className="network-scope-strip" aria-label="关系网络数据作用域">
+        <span>时间范围 <strong>{activeYearRangeLabel}</strong></span>
+        <span>
+          关系网络 <strong>{selectedNetworkWar?.name ?? "全部战争"}</strong>
+        </span>
+        <span>参战方 <strong>{selectedParticipantName ?? "全部"}</strong></span>
+        <span className="local-scope">仅关系视图</span>
+        {selectedBattle ? (
+          <span className="network-event-status">
+            当前事件 <strong>{selectedBattle.name}</strong>
+            {selectedBattleParticipantLabel ? `：${selectedBattleParticipantLabel}` : ""}
+          </span>
+        ) : null}
       </div>
       <div className="network-filter-row">
         <div className="participant-combobox">
@@ -747,7 +779,7 @@ export function NetworkView({
           ) : null}
         </div>
         <label className="network-war-filter" htmlFor="network-war-select">
-          <span>具体战争</span>
+          <span>网络局部范围 <em>仅关系视图</em></span>
           <select
             id="network-war-select"
             value={selectedNetworkWarId ?? ""}
@@ -756,10 +788,10 @@ export function NetworkView({
               setInspectedEdgeKey(null);
             }}
           >
-            <option value="">全部战争 · {battles.length} 条事件</option>
+            <option value="">全部战争 · {battles.length} 条事件 · 仅关系视图</option>
             {networkWarOptions.map((war) => (
               <option key={war.id} value={war.id}>
-                {war.name} · {war.eventCount} 条事件
+                {war.name} · {war.eventCount} 条事件 · 仅关系视图
               </option>
             ))}
           </select>
@@ -802,7 +834,7 @@ export function NetworkView({
               onClick={() => setActiveView("matrix")}
             >
               <Grid3X3 size={16} />
-              事件矩阵
+              参战方年度热力图
             </button>
           </div>
           <div className="network-visual-grid network-single-view">
@@ -1069,11 +1101,11 @@ export function NetworkView({
                           role="button"
                           tabIndex={0}
                           aria-label={`${participantName} 在 ${column.name} 中有 ${count} 条事件`}
-                          onClick={() => onSelectParticipant(row.id)}
+                          onClick={() => onSelectParticipantPeriod(row.id, [column.start, column.end])}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              onSelectParticipant(row.id);
+                              onSelectParticipantPeriod(row.id, [column.start, column.end]);
                             }
                           }}
                         >
