@@ -3,6 +3,7 @@ import {
   canonicalizeBattleParticipants,
   getCanonicalParticipantName,
 } from "../lib/participantNormalization";
+import { publicAssetPath } from "../lib/publicAsset";
 import type { Actor, Battle, Participant, War } from "../types/domain";
 
 type BattleDataState = {
@@ -36,7 +37,7 @@ type HcedEventRow = {
   source: string;
 };
 
-const hcedCsvPath = "/data/hced/conflict_events.csv";
+const hcedCsvPath = publicAssetPath("data/hced/conflict_events.csv");
 
 function parseCsv(text: string): HcedEventRow[] {
   const rows: string[][] = [];

@@ -12,7 +12,13 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run --exclude e2e/**",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "slides:dev": "marp --server presentation --theme-set presentation/themes/battlemap-zju.css --html --allow-local-files",
+    "slides:html": "node scripts/build-slides.mjs html",
+    "slides:pdf": "node scripts/build-slides.mjs pdf",
+    "slides:pptx": "node scripts/build-slides.mjs pptx",
+    "slides:build": "node scripts/build-slides.mjs all",
+    "site:build": "npm run build && npm run slides:build && node scripts/assemble-pages.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.0.2",
@@ -26,6 +32,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",
+    "@marp-team/marp-cli": "4.4.0",
     "@types/leaflet": "^1.9.17",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",

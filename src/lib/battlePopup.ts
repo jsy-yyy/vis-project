@@ -1,4 +1,5 @@
 import type { Battle } from "../types/domain";
+import { publicAssetPath } from "./publicAsset";
 
 export type PopupSide = {
   name: string;
@@ -32,45 +33,45 @@ type FlagRule = {
 };
 
 const flagAssets = {
-  austriaHungary: { id: "austria-hungary", src: "/flags/austria-hungary.svg", label: "Austria-Hungary flag" },
-  chinaPrC: { id: "china-prc", src: "/flags/china-prc.svg", label: "People's Republic of China flag" },
-  chinaQing: { id: "china-qing", src: "/flags/china-qing.svg", label: "Qing China flag" },
-  chinaRoc: { id: "china-roc", src: "/flags/china-roc.svg", label: "Republic of China flag" },
-  france: { id: "france", src: "/flags/france.svg", label: "France flag" },
-  germanyEmpire: { id: "germany-empire", src: "/flags/germany-empire.svg", label: "German Empire flag" },
-  germanyModern: { id: "germany-modern", src: "/flags/germany-modern.svg", label: "Germany flag" },
-  italy: { id: "italy", src: "/flags/italy.svg", label: "Italy flag" },
-  italyKingdom: { id: "italy-kingdom", src: "/flags/italy-kingdom.svg", label: "Kingdom of Italy flag" },
-  japan: { id: "japan", src: "/flags/japan.svg", label: "Japan flag" },
-  ottoman: { id: "ottoman", src: "/flags/ottoman.svg", label: "Ottoman Empire flag" },
-  prussia: { id: "prussia", src: "/flags/prussia.svg", label: "Prussia flag" },
-  russia: { id: "russia", src: "/flags/russia.svg", label: "Russia flag" },
-  turkey: { id: "turkey", src: "/flags/turkey.svg", label: "Turkey flag" },
-  uk: { id: "united-kingdom", src: "/flags/united-kingdom.svg", label: "United Kingdom flag" },
-  usa: { id: "united-states", src: "/flags/united-states.svg", label: "United States flag" },
-  ussr: { id: "ussr", src: "/flags/ussr.svg", label: "Soviet Union flag" },
-  freeFrance: { id: "free-france", src: "/flags/free-france.svg", label: "Free France flag" },
+  austriaHungary: { id: "austria-hungary", src: publicAssetPath("flags/austria-hungary.svg"), label: "Austria-Hungary flag" },
+  chinaPrC: { id: "china-prc", src: publicAssetPath("flags/china-prc.svg"), label: "People's Republic of China flag" },
+  chinaQing: { id: "china-qing", src: publicAssetPath("flags/china-qing.svg"), label: "Qing China flag" },
+  chinaRoc: { id: "china-roc", src: publicAssetPath("flags/china-roc.svg"), label: "Republic of China flag" },
+  france: { id: "france", src: publicAssetPath("flags/france.svg"), label: "France flag" },
+  germanyEmpire: { id: "germany-empire", src: publicAssetPath("flags/germany-empire.svg"), label: "German Empire flag" },
+  germanyModern: { id: "germany-modern", src: publicAssetPath("flags/germany-modern.svg"), label: "Germany flag" },
+  italy: { id: "italy", src: publicAssetPath("flags/italy.svg"), label: "Italy flag" },
+  italyKingdom: { id: "italy-kingdom", src: publicAssetPath("flags/italy-kingdom.svg"), label: "Kingdom of Italy flag" },
+  japan: { id: "japan", src: publicAssetPath("flags/japan.svg"), label: "Japan flag" },
+  ottoman: { id: "ottoman", src: publicAssetPath("flags/ottoman.svg"), label: "Ottoman Empire flag" },
+  prussia: { id: "prussia", src: publicAssetPath("flags/prussia.svg"), label: "Prussia flag" },
+  russia: { id: "russia", src: publicAssetPath("flags/russia.svg"), label: "Russia flag" },
+  turkey: { id: "turkey", src: publicAssetPath("flags/turkey.svg"), label: "Turkey flag" },
+  uk: { id: "united-kingdom", src: publicAssetPath("flags/united-kingdom.svg"), label: "United Kingdom flag" },
+  usa: { id: "united-states", src: publicAssetPath("flags/united-states.svg"), label: "United States flag" },
+  ussr: { id: "ussr", src: publicAssetPath("flags/ussr.svg"), label: "Soviet Union flag" },
+  freeFrance: { id: "free-france", src: publicAssetPath("flags/free-france.svg"), label: "Free France flag" },
   orangeFreeState: {
     id: "orange-free-state",
-    src: "/flags/orange-free-state.svg",
+    src: publicAssetPath("flags/orange-free-state.svg"),
     label: "Orange Free State flag",
   },
-  southVietnam: { id: "south-vietnam", src: "/flags/south-vietnam.svg", label: "South Vietnam flag" },
-  transvaal: { id: "transvaal", src: "/flags/transvaal.svg", label: "South African Republic flag" },
+  southVietnam: { id: "south-vietnam", src: publicAssetPath("flags/south-vietnam.svg"), label: "South Vietnam flag" },
+  transvaal: { id: "transvaal", src: publicAssetPath("flags/transvaal.svg"), label: "South African Republic flag" },
   yugoslaviaKingdom: {
     id: "yugoslavia-kingdom",
-    src: "/flags/yugoslavia-kingdom.svg",
+    src: publicAssetPath("flags/yugoslavia-kingdom.svg"),
     label: "Kingdom of Yugoslavia flag",
   },
   yugoslaviaSocialist: {
     id: "yugoslavia-socialist",
-    src: "/flags/yugoslavia-socialist.svg",
+    src: publicAssetPath("flags/yugoslavia-socialist.svg"),
     label: "Socialist Yugoslavia flag",
   },
 } satisfies Record<string, FlagAsset>;
 
 function createIsoFlag(id: string, isoCode: string, label: string): FlagAsset {
-  return { id, isoCode, src: `/flags/iso/${isoCode}.svg`, label };
+  return { id, isoCode, src: publicAssetPath(`flags/iso/${isoCode}.svg`), label };
 }
 
 const explicitHistoricalFlags = new Map<string, FlagAsset>([

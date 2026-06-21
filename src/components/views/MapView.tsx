@@ -20,6 +20,7 @@ import {
   shouldClearHeatCellFocus,
 } from "../../lib/mapHeat";
 import { resolveCShapesSnapshot } from "../../lib/cshapesSnapshots";
+import { publicAssetPath } from "../../lib/publicAsset";
 import type { AnalysisMode, Battle, Participant, YearRange } from "../../types/domain";
 
 type MapViewProps = {
@@ -790,7 +791,7 @@ export function MapView({
   useEffect(() => {
     let active = true;
 
-    fetch("/data/basemaps/ne_110m_land.geojson")
+    fetch(publicAssetPath("data/basemaps/ne_110m_land.geojson"))
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Natural Earth 陆地底图加载失败：${response.status}`);
@@ -809,7 +810,7 @@ export function MapView({
         }
       });
 
-    fetch("/data/cshapes/cshapes_1886_2003_snapshots.geojson")
+    fetch(publicAssetPath("data/cshapes/cshapes_1886_2003_snapshots.geojson"))
       .then((response) => {
         if (!response.ok) {
           throw new Error(`CShapes 历史边界快照加载失败：${response.status}`);
