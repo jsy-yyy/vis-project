@@ -532,19 +532,19 @@ section.demo .small {
 .state-flow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin: 16px 0 28px;
+  gap: 12px;
+  margin: 10px 0 18px;
 }
 
 .state-flow > div {
   position: relative;
-  padding: 17px 14px;
+  padding: 12px 10px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--panel);
   color: var(--muted);
   text-align: center;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .state-flow > div:not(:last-child)::after {
@@ -560,7 +560,39 @@ section.demo .small {
 
 .state-flow b {
   color: var(--text);
-  font-size: 19px;
+  font-size: 17px;
+}
+
+.state-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.state-panel {
+  min-height: 255px;
+  padding: 18px 22px;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--zju-blue);
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.state-panel:last-child {
+  border-top-color: var(--teal);
+}
+
+.state-panel li {
+  margin-bottom: 8px;
+  color: #34474f;
+  font-size: 18px;
+}
+
+.state-vars {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
 }
 
 .architecture {
@@ -594,6 +626,169 @@ section.demo .small {
 
 .appendix {
   font-size: 21px;
+}
+
+.dataset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.dataset-card {
+  min-height: 355px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--zju-blue);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.dataset-card.cshapes {
+  border-top-color: var(--teal);
+}
+
+.dataset-card h3 {
+  margin-bottom: 14px;
+  font-size: 28px;
+}
+
+.dataset-card p {
+  margin: 9px 0;
+  color: #34474f;
+  font-size: 18px;
+}
+
+.record-example {
+  display: grid;
+  gap: 4px;
+  margin: 18px 0 14px;
+  padding: 13px 15px;
+  border-left: 4px solid var(--zju-blue);
+  background: var(--soft-blue);
+}
+
+.cshapes .record-example {
+  border-left-color: var(--teal);
+  background: var(--soft-teal);
+}
+
+.record-example b {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.record-example span {
+  color: var(--muted);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 14px;
+}
+
+.dataset-card .dataset-limit {
+  margin-top: 10px;
+  color: #6c593a;
+  font-size: 15px;
+}
+
+.data-join {
+  margin: 16px 0 0;
+  padding: 10px 15px;
+  border-left: 4px solid var(--amber);
+  background: var(--soft-amber);
+  color: #5d4b2f;
+  font-size: 16px;
+}
+
+.view-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+}
+
+.view-grid figure {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+  box-shadow: 0 5px 14px rgba(32, 50, 57, 0.08);
+}
+
+.view-grid img {
+  display: block;
+  width: 100%;
+  height: 165px;
+  border-bottom: 1px solid var(--line);
+  object-fit: cover;
+  object-position: center;
+}
+
+.view-grid figcaption {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  padding: 7px 12px;
+}
+
+.view-grid figcaption b {
+  color: var(--zju-blue);
+  font-size: 17px;
+}
+
+.view-grid figcaption span {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.member-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.member-card {
+  min-height: 245px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--zju-blue);
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.member-card:nth-child(2) {
+  border-top-color: var(--teal);
+}
+
+.member-card:nth-child(3) {
+  border-top-color: var(--amber);
+}
+
+.member-card li {
+  margin-bottom: 9px;
+  color: #34474f;
+  font-size: 16px;
+}
+
+.team-work {
+  margin-top: 12px;
+  padding: 9px 14px;
+  background: var(--soft-teal);
+  color: #315b57;
+  font-size: 15px;
+}
+
+.reproduce-row {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.reproduce-row code {
+  padding: 5px 8px;
+  font-size: 12px;
 }
 
 .appendix table {

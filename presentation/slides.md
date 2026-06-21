@@ -65,15 +65,13 @@ description: 数据可视化导论课程项目答辩
 # 以 1939–1945 年为例
 
 <div class="video-wrap">
-  <video class="video-player" controls preload="metadata" poster="./assets/demo-poster.png" src="./assets/demo-short.mp4"></video>
+  <video class="video-player" controls preload="metadata" poster="./assets/demo-poster.png" src="./assets/demo.mp4"></video>
   <img class="video-poster" src="./assets/demo-poster.png" alt="World War II 案例演示封面">
-  <span class="video-badge">约 60 秒</span>
+  <span class="video-badge">约 70 秒</span>
 </div>
 
-<p class="small">备用文件：<code>demo-short.mp4</code>　·　<a href="../app/?mode=multi&year=1944&start=1939&end=1945#timeline-overview">打开在线案例</a></p>
-
 <!--
-成员 B · 约 55–60 秒
+成员 B · 约 65–70 秒
 视频依次展示：选择二战时间窗口；定位 1944 年峰值；查看欧洲和亚太地区的事件分布；比较主要参战方关系；点击具体事件查看原始记录。
 -->
 
@@ -159,21 +157,48 @@ description: 数据可视化导论课程项目答辩
 <!-- _header: Appendix A · 数据说明 -->
 <!-- _class: appendix -->
 
-# 数据来源与使用限制
+# 两个数据集共同构成分析语境
 
-| 项目 | 说明 |
-| --- | --- |
-| 主数据 | Historical Conflict Event Dataset (HCED Data v3) |
-| 时间范围 | 1886–2003 |
-| 有效记录 | 1,920 条具有年份和经纬度的事件 |
-| 历史边界 | CShapes 2.0 国家／领土边界 |
-| 处理方式 | Node.js 脚本完成下载、过滤、字段映射和名称规范化 |
+<div class="dataset-grid">
+<div class="dataset-card">
 
-- HCED 中的记录是 **conflict event**，不一定都是狭义的 battle。
-- 两个参战方“共现”只表示它们出现在同一条事件记录中，不直接表示联盟或敌对。
-- CShapes 提供国家或领土边界，不表示战线、占领区或实际控制范围。
+### HCED Data v3
 
-> 详细来源、许可和处理步骤见项目 README。
+<b>提供什么：</b>带时间、地点、参战方和结果的军事冲突事件。
+
+<b>本项目使用：</b>1,920 条记录，覆盖 1886–2003 年。
+
+<div class="record-example">
+<b>示例事件 · Aachen1944</b>
+<span>1944 · Aachen, Germany</span>
+<span>United States vs Germany · Land</span>
+</div>
+
+<p class="dataset-limit">记录是 conflict event；参战方共现不直接等于联盟或敌对。</p>
+
+</div>
+<div class="dataset-card cshapes">
+
+### CShapes 2.0
+
+<b>提供什么：</b>不同历史时期的国家或领土边界几何。
+
+<b>本项目使用：</b>2,930 个快照要素，与分析年份匹配显示。
+
+<div class="record-example">
+<b>示例快照 · United States of America</b>
+<span>snapshot_year: 1890 · MultiPolygon</span>
+<span>有效期起点 1886 · 来源 CShapes 2.0</span>
+</div>
+
+<p class="dataset-limit">边界不表示战线、占领区或实际控制范围。</p>
+
+</div>
+</div>
+
+<p class="data-join">HCED 决定“事件何时、在哪里发生”，CShapes 提供对应年份的历史边界背景；两者按时间与空间共同参与地图分析。</p>
+
+> 数据来源、许可与清洗步骤详见项目 README。
 
 ---
 
@@ -182,14 +207,24 @@ description: 数据可视化导论课程项目答辩
 
 # 各视图分别回答什么问题？
 
-| 问题 | 使用的视图 | 主要编码 |
-| --- | --- | --- |
-| 哪些年份事件较多？ | 年度柱形图、区间选择 | 柱高表示事件数 |
-| 事件集中在哪里？ | 历史地图 | 位置表示经纬度；多年气泡大小表示聚集数量 |
-| 哪些参战方经常共同出现？ | 共现网络、年度热力图 | 节点大小表示事件数；边宽表示共现次数 |
-| 图形对应哪些记录？ | 地图下钻、事件详情 | 展示地点、年份、参战方和原始描述 |
-
-<p class="note">颜色主要用于区分事件类型、关系角色和当前选择，不用于表示事件严重程度。</p>
+<div class="view-grid">
+<figure>
+  <img src="./assets/view-timeline.png" alt="时间概览">
+  <figcaption><b>什么时候集中？</b><span>年度柱形与区间选择定位峰值和分析窗口。</span></figcaption>
+</figure>
+<figure>
+  <img src="./assets/view-map.png" alt="地图视图">
+  <figcaption><b>事件在哪里聚集？</b><span>位置表示经纬度，多年气泡表示事件聚集数量。</span></figcaption>
+</figure>
+<figure>
+  <img src="./assets/view-network.png" alt="参战方关系网络">
+  <figcaption><b>谁与谁经常共现？</b><span>节点大小表示事件数，边宽表示共现次数。</span></figcaption>
+</figure>
+<figure>
+  <img src="./assets/view-details.png" alt="统计概览与事件详情">
+  <figcaption><b>结论由哪些记录构成？</b><span>统计概览保留整体结构，事件详情提供具体核查入口。</span></figcaption>
+</figure>
+</div>
 
 ---
 
@@ -205,21 +240,22 @@ description: 数据可视化导论课程项目答辩
   <div><b>视图更新</b><br>时间、地图、关系和详情同步变化</div>
 </div>
 
-<div class="columns-55">
-<div>
+<div class="state-detail-grid">
+<div class="state-panel">
 
-### 主要状态
+### 用户看到的分析条件
 
-- `analysisMode`
-- `selectedYearRange`
-- `currentYear`
-- `selectedParticipant`
-- `selectedBattleId`
+- 单年度或多年度分析
+- 当前年份与年份范围
+- 聚焦的参战方
+- 当前选中或锁定的事件
+
+<p class="state-vars"><code>analysisMode</code> · <code>selectedYearRange</code> · <code>currentYear</code> · <code>selectedParticipant</code> · <code>selectedBattleId</code></p>
 
 </div>
-<div>
+<div class="state-panel">
 
-### 为了便于复现
+### 为了保持可复现
 
 - 当前分析条件写入 URL
 - 分享链接可以恢复年份和参战方
@@ -236,43 +272,46 @@ description: 数据可视化导论课程项目答辩
 
 # 成员分工、运行方式与 AI 使用
 
-<div class="columns-3">
-<div>
+<div class="member-grid">
+<div class="member-card">
 
 ### 成员 A
 
-- HCED 数据清洗
-- CShapes 快照生成
-- 历史实体名称处理
+- HCED 下载、清洗与字段映射
+- CShapes 快照生成与年份匹配
+- Map View、历史边界呈现与地图交互
 
 </div>
-<div>
+<div class="member-card">
 
 ### 成员 B
 
-- 时间视图与案例分析
-- 关系网络与视图联动
-- 交互测试与调整
+- Timeline 与案例分析
+- 关系网络及关系数据处理
+- 时间、地图与网络间的联动优化
 
 </div>
-<div>
+<div class="member-card">
 
 ### 成员 C
 
 - React/Vite 项目架构
-- 全局状态与系统集成
-- 详情、统计和文档
+- 页面布局、全局状态与系统集成
+- 展开详情页、统计概览与事件详情
+- UI 统一、README 与提交文档
 
 </div>
 </div>
 
-```bash
-npm install
-npm run build:hced
-npm run build:cshapes
-npm test
-npm run build
-npm run test:e2e
-```
+<div class="team-work"><b>共同完成：</b>跨模块联调、自动化测试、案例复核与最终答辩验收。</div>
+
+<div class="reproduce-row">
+<code>npm install</code>
+<code>npm run build:hced</code>
+<code>npm run build:cshapes</code>
+<code>npm test</code>
+<code>npm run build</code>
+<code>npm run test:e2e</code>
+</div>
 
 <p class="small"><strong>AI 使用：</strong>使用 OpenAI Codex 辅助代码审查、调试、测试补充和文档整理。数据选择、分析问题、视图与交互设计以及最终验收由团队成员完成。</p>
